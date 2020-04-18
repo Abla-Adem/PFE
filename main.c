@@ -1,9 +1,15 @@
+//
+// Created by adem on 28/03/2020.
+//
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <omp.h>
-typedef char* ch[5];
+typedef char* ch[200];
 typedef struct LC LC;
+typedef int tableau[];
 struct LC{
     int x;
     LC* s;
@@ -13,8 +19,8 @@ struct Liste
 {
     LC *premier;
 };
-void radix(ch t);
-
+char* radix(ch t,char* alpha,int taille);
+char* getname(int tab[],int taille, ch t);
 
 
 
@@ -27,34 +33,8 @@ void radix(ch t);
 
 
 int main() {
-    /*
-    ch t;
-    t[0]=malloc(strlen("aggtg"));
-    strcpy(t[0],"aggtg");
-    t[1]=malloc(strlen("aaggc"));
-    strcpy(t[1],"aaggc");
-    t[2]=malloc(strlen("aaaaaaaaa"));
-    strcpy(t[2],"aaaaaaaaa");
-    t[3]=malloc(strlen("cccccccc"));
-    strcpy(t[3],"cccccccc");
-    t[4]=malloc(strlen("aaggca"));
-    strcpy(t[4],"aaggca");
-
-
-    printf("le tableau avant trie :");
-    for (int i = 0; i <5 ; ++i) {
-        printf("%s ",t[i]);
-    }
-    printf("\n");
-
-    radix(t);
-    printf("resultat final :");
-    for (int i = 0; i <5 ; ++i) {
-        printf("%s ",t[i]);
-    }
-    printf("\n");
-    */
     int s_etoile=0;
+    int nbr=0;
     int s_etoile_debut;
     char btw[]="mmiissiissiippii";
     int tab[strlen(btw)];
@@ -65,17 +45,15 @@ int main() {
     int deb,fin;
     int coupoure[8];
     Liste* s_etoile_tab[8];
+    //a optimiser
+    int alphabet[258]={ };
+    int taille;
+    //fin
     printf("tab debut \n");
-    /*
-    for (int k = 0; k <strlen(btw) ; ++k) {
-        printf("%i ",tab[k]);
-
-    }
-    */
     printf("\n");
-    #pragma omp parallel for
+#pragma omp parallel for
     for (int j = 0; j <omp_get_num_threads() ; ++j) {
-    coupoure[j]=-1;
+        coupoure[j]=-1;
     }
 #pragma omp parallel for
     for (int j = 0; j <strlen(btw) ; ++j) {
@@ -91,6 +69,7 @@ int main() {
         int f, d,egal;
         egal=100;
         int init=0;
+        int temporaire;
         f = strlen(btw) / omp_get_num_threads();
         d = omp_get_thread_num();
         s_etoile_tab[d]=malloc(sizeof(Liste));
@@ -99,7 +78,12 @@ int main() {
         {
 
             for (int i = f * d; i < strlen(btw); ++i) {
-
+                temporaire=btw[i];
+                if(alphabet[temporaire]==0)
+                {
+                    taille++;
+                }
+                alphabet[temporaire]++;
                 if (btw[i] > btw[i + 1]) {
                     tab[i] = 0;
 
@@ -115,17 +99,18 @@ int main() {
                     if (egal != 100) {
                         while(tab[egal-1]==-1 & coupoure[d-1]==-1)
                         {
-                            #pragma omp flush
+#pragma omp flush
                         }
                         if (tab[egal - 1] == 0 ) {
-                         pointeur->x=i;
-                         LC *temp=malloc(sizeof(LC));
-                         temp->s=NULL;
-                         pointeur->s=temp;
-                         precedent=pointeur;
-                         pointeur=pointeur->s;
+                            pointeur->x=i;
+                            LC *temp=malloc(sizeof(LC));
+                            temp->s=NULL;
+                            pointeur->s=temp;
+                            precedent=pointeur;
+                            pointeur=pointeur->s;
                             init=1;
                             tab[egal] = 2;
+                            nbr=nbr+1;
 
 
 
@@ -147,7 +132,7 @@ int main() {
 
                     while(tab[i-1]==-1 & coupoure[d-1]==-1)
                     {
-                        #pragma omp flush
+#pragma omp flush
                     }
                     if(tab[i]==1  && tab[i-1]==0)
                     {
@@ -158,7 +143,7 @@ int main() {
                         pointeur->s=temp;
                         precedent=pointeur;
                         pointeur=pointeur->s;
-
+                        nbr=nbr+1;
                         tab[i]=2;
                         init=1;
 
@@ -177,6 +162,12 @@ int main() {
 
 
             for (int i = f * d; i < (f) * (d + 1); ++i) {
+                temporaire=btw[i];
+                if(alphabet[temporaire]==0)
+                {
+                    taille++;
+                }
+                alphabet[temporaire]++;
 
                 if (btw[i] > btw[i + 1]) {
                     tab[i] = 0;
@@ -194,27 +185,27 @@ int main() {
 
                         while(tab[egal-1]==-1 & coupoure[d-1]==-1)
                         {
-                    #pragma omp flush
+#pragma omp flush
                         }
-                            if (tab[egal - 1] == 0) {
-                                pointeur->x=i;
-                                LC *temp=malloc(sizeof(LC));
-                                temp->s=NULL;
-                                pointeur->s=temp;
-                                precedent=pointeur;
-                                pointeur=pointeur->s;
-                                tab[egal] = 2;
-                                init=1;
+                        if (tab[egal - 1] == 0) {
+                            pointeur->x=i;
+                            LC *temp=malloc(sizeof(LC));
+                            temp->s=NULL;
+                            pointeur->s=temp;
+                            precedent=pointeur;
+                            pointeur=pointeur->s;
+                            tab[egal] = 2;
+                            init=1;
+                            nbr=nbr+1;
 
 
+                        } else {
+                            tab[egal] = 1;
+                        }
+                        for (int j = egal + 1; j < i; ++j) {
+                            tab[j] = 1;
 
-                            } else {
-                                tab[egal] = 1;
-                            }
-                            for (int j = egal + 1; j < i; ++j) {
-                                tab[j] = 1;
-
-                            }
+                        }
 
 
 
@@ -224,7 +215,7 @@ int main() {
 
                     while(tab[i-1]==-1 &coupoure[d-1]==-1 )
                     {
-                #pragma omp flush
+#pragma omp flush
                     }
 
 
@@ -237,7 +228,7 @@ int main() {
                         pointeur=pointeur->s;
                         tab[i] = 2;
                         init=1;
-
+                        nbr=nbr+1;
                     }
 
                 } else if (i < egal) {
@@ -303,35 +294,35 @@ int main() {
                 }
 
             }
-                if (tab[fin] != 0 && btw[coupoure[j]] == btw[fin]) {
-                    result = tab[fin];
+            if (tab[fin] != 0 && btw[coupoure[j]] == btw[fin]) {
+                result = tab[fin];
 
-                } else if (btw[coupoure[j]] < btw[fin]) {
-                    result = 1;
+            } else if (btw[coupoure[j]] < btw[fin]) {
+                result = 1;
 
-                        tab[fin]=1;
+                tab[fin]=1;
 
-                } else {
-                    result = 0;
-                    tab[fin]=0;
-                }
+            } else {
+                result = 0;
+                tab[fin]=0;
+            }
 
 #pragma omp parallel for
-                for (int i = compteur+1; i < fin; ++i) {
+            for (int i = compteur+1; i < fin; ++i) {
 
 
-                    tab[i] = result;
+                tab[i] = result;
 
-                    if (i != 0) {
-                        if (tab[i] == 1 && tab[i - 1] == 0) {
-                            int temoraire=i/f;
+                if (i != 0) {
+                    if (tab[i] == 1 && tab[i - 1] == 0) {
+                        int temoraire=i/f;
 
-                            if(temoraire>=7)
-                            {
+                        if(temoraire>=7)
+                        {
                             LC *pointeur=s_etoile_tab[7]->premier;
-                                LC *nouveau = malloc(sizeof(LC));
-                                nouveau->s = NULL;
-                                nouveau->x = i;
+                            LC *nouveau = malloc(sizeof(LC));
+                            nouveau->s = NULL;
+                            nouveau->x = i;
                             if(pointeur!=NULL) {
                                 while (pointeur->s != NULL) {
                                     pointeur = pointeur->s;
@@ -341,32 +332,32 @@ int main() {
                             } else{
                                 s_etoile_tab[7]->premier=nouveau;
                             }
+                        } else
+                        {
+
+                            LC *pointeur=s_etoile_tab[temoraire]->premier;
+                            LC *nouveau = malloc(sizeof(LC));
+                            nouveau->s = NULL;
+                            nouveau->x = i;
+                            if(pointeur!=NULL) {
+                                while (pointeur->s != NULL) {
+                                    pointeur = pointeur->s;
+                                }
+
+
+                                pointeur->s = nouveau;
                             } else
                             {
-
-                                LC *pointeur=s_etoile_tab[temoraire]->premier;
-                                LC *nouveau = malloc(sizeof(LC));
-                                nouveau->s = NULL;
-                                nouveau->x = i;
-                                if(pointeur!=NULL) {
-                                    while (pointeur->s != NULL) {
-                                        pointeur = pointeur->s;
-                                    }
-
-
-                                    pointeur->s = nouveau;
-                                } else
-                                {
-                                    s_etoile_tab[temoraire]->premier=nouveau;
-                                }
+                                s_etoile_tab[temoraire]->premier=nouveau;
                             }
-                            tab[i] = 2;
-
                         }
+                        tab[i] = 2;
+                        nbr=nbr+1;
                     }
                 }
-
             }
+
+        }
 
         j=j-saut;
 
@@ -380,7 +371,9 @@ int main() {
     int etoile=0;
     int debut;
     char *teste;
-    printf("\n debut sous chaine \n");
+
+    char* schaine[nbr];
+    int indice=0;
     for (int l = 0; l <8 ; ++l) {
         LC *temp=s_etoile_tab[l]->premier;
         while (temp!=NULL)
@@ -393,21 +386,55 @@ int main() {
             } else
             {
 
-                teste=malloc(sizeof((temp->x-debut)));
-                strncpy(teste,btw+debut,(temp->x-debut));
-                printf("%s \n",teste,l);
+                schaine[indice]=malloc(sizeof((temp->x-debut)));
+                strncpy(schaine[indice],btw+debut,(temp->x-debut));
                 debut=temp->x;
+                indice=indice+1;
             }
             temp=temp->s;
+
         }
 
 
     }
-    teste=malloc(sizeof((strlen(btw)-debut)));
-    strncpy(teste,btw+debut,(strlen(btw)-debut));
-    printf("%s\n",teste);
+    schaine[indice]=malloc(sizeof((strlen(btw)-debut)));
+    strncpy(schaine[indice],btw+debut,(strlen(btw)-debut));
+
+
+    char t;
+    char* test;
+    char alpha[taille+1];
+    ;
+    alpha[0]=' ';
+    indice=1;
+    int total=0;
+    int tempo;
+    for (int n = 0; n <258 ; ++n) {
+        if (alphabet[n]!=0)
+        {
+            tempo=alphabet[n];
+            alphabet[n]=total;
+            total=total+tempo;
+            t=n;
+
+            alpha[indice]=t;
+            indice++;
+
+
+        }
+    }
+    printf("alhabet:%s \n",alpha);
+    printf("\n debut sous chaine \n");
+    for (int m = 0; m <nbr ; ++m) {
+        printf("%s ",schaine[m]);
+
+    }
 
     printf("fin sous chaine \n");
+    char* stexte;
+    stexte=radix(schaine,alpha,nbr);
+    printf("schaine %s",stexte);
+
     return 0;
 }
 
@@ -460,22 +487,23 @@ int main() {
 
 
 
-void radix(ch t)
+char* radix(ch t,char* alphabet,int taille)
 {
-
+    int tab[taille];
 
     char *s;
-    char alphabet[]=" acgt";
     int borne_inferieur;
     char u=' ';
     int compteurtabbleau,position_char;
     borne_inferieur=u;
     int temporaire;
-
-    int tableau_frequence[116]={ };
+    for (int l = 0; l < taille; ++l) {
+        tab[l]=l;
+    }
+    int tableau_frequence[84]={ };
     int max=strlen(t[0]);
 
-    for (int i = 1; i <5 ; ++i) {
+    for (int i = 1; i <taille ; ++i) {
 
         if(strlen(t[i])>max)
         {
@@ -492,10 +520,11 @@ void radix(ch t)
     int temp;
 
     for (int i = max; i>-1 ; --i) {
-    //a optimiser
-        int tableau_frequence[116]={ };
+        //a optimiser
 
-        for (int j = 0; j <5 ; ++j) {
+        int tableau_frequence[84]={ };
+
+        for (int j = 0; j <taille ; ++j) {
 
             if (strlen(t[j])-1 >=i)
             {
@@ -517,20 +546,26 @@ void radix(ch t)
             position_char =position_char+temporaire;
         }
 
-
+        int inter;
         compteurtabbleau=0;
-        while (compteurtabbleau<5)
+
+        while (compteurtabbleau<taille)
         {
 
             if(i>=strlen(t[compteurtabbleau]))
             {
                 if(compteurtabbleau==tableau_frequence[0])
                 {
+
                     compteurtabbleau++;
                     tableau_frequence[0]++;
-                } else if(tableau_frequence[0]<5)
+                } else if(tableau_frequence[0]<taille)
                 {
                     s=t[compteurtabbleau];
+                    inter=tab[compteurtabbleau];
+                    tab[compteurtabbleau]=tab[tableau_frequence[0]];
+
+                    tab[tableau_frequence[0]]=inter;
                     t[compteurtabbleau]=t[tableau_frequence[0]];
                     t[tableau_frequence[0]]=s;
                     tableau_frequence[0]++;
@@ -547,11 +582,15 @@ void radix(ch t)
 
                 if(compteurtabbleau==tableau_frequence[temp-borne_inferieur])
                 {
+
                     compteurtabbleau++;
                     tableau_frequence[temp-borne_inferieur]++;
-                } else if(tableau_frequence[temp-borne_inferieur]<5)
+                } else if(tableau_frequence[temp-borne_inferieur]<taille)
                 {
                     s=t[compteurtabbleau];
+                    inter=tab[compteurtabbleau];
+                    tab[compteurtabbleau]=tab[tableau_frequence[temp-borne_inferieur]];
+                    tab[tableau_frequence[temp-borne_inferieur]]=inter;
                     t[compteurtabbleau]=t[tableau_frequence[temp-borne_inferieur]];
                     t[tableau_frequence[temp-borne_inferieur]]=s;
                     tableau_frequence[temp-borne_inferieur]++;
@@ -566,4 +605,63 @@ void radix(ch t)
         }
 
     }
+
+
+    return getname(tab,taille,t);
+
+
+}
+char* getname(int tab[],int taille, ch t)
+{
+    int stop,indice,egal,boucle;
+    char* name;
+    name=malloc(taille* sizeof(char));
+
+    char sch;
+    for (int m = 0; m <taille-1 ; ++m) {
+        stop=m;
+        while (strlen(t[m])==strlen(t[m+1]) && m<taille-1)
+        {
+
+            m=m+1;
+        }
+        indice=strlen(t[stop]);
+        if (m!=stop){
+            egal=0;
+
+        } else
+        {
+            egal=1;
+
+            name[tab[m]]=m+1;
+
+        }
+
+        while (indice>-1 && egal==0)
+        {
+
+            boucle=stop;
+            while (egal==0 && boucle<=m-1 )
+            {
+                if(t[boucle][indice]!=t[boucle+1][indice])
+                {
+                    egal=1;
+                }
+                boucle++;
+            }
+            indice=indice-1;
+        }
+        if(egal==0 )
+        {
+
+            for (int i = stop; i <=m ; ++i) {
+
+                name[tab[i]]=stop+1;
+
+
+            }
+        }
+    }
+
+    return name;
 }
