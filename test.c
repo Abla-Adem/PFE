@@ -1,10 +1,15 @@
+//
+// Created by adem on 28/03/2020.
+//
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <omp.h>
 typedef char* ch[200];
 typedef struct LC LC;
-typedef int tableau[2];
+typedef int tableau[];
 struct LC{
     int x;
     LC* s;
@@ -14,9 +19,9 @@ struct Liste
 {
     LC *premier;
 };
-void radix(ch t,char* alpha,int taille);
+char* radix(ch t,char* alpha,int taille);
 char* getname(int tab[],int taille, ch t);
-void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[]);
+
 
 
 
@@ -28,136 +33,23 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
 
 
 int main() {
-    /*
-    ch t;
-    t[0]=malloc(strlen("aggtg"));
-    strcpy(t[0],"aggtg");
-    t[1]=malloc(strlen("aaggc"));
-    strcpy(t[1],"aaggc");
-    t[2]=malloc(strlen("aaaaaaaaa"));
-    strcpy(t[2],"aaaaaaaaa");
-    t[3]=malloc(strlen("cccccccc"));
-    strcpy(t[3],"cccccccc");
-    t[4]=malloc(strlen("aaggca"));
-    strcpy(t[4],"aaggca");
-
-
-    printf("le tableau avant trie :");
-    for (int i = 0; i <5 ; ++i) {
-        printf("%s ",t[i]);
-    }
-    printf("\n");
-
-    radix(t);
-    printf("resultat final :");
-    for (int i = 0; i <5 ; ++i) {
-        printf("%s ",t[i]);
-    }
-    printf("\n");
-    */
-    Liste* s_etoile_tab[8];
-    char btw[]="mmiissiissiippii";
-    int tab[strlen(btw)];
-    int etoile=0;
-    int debut;
-    char *teste;
-    int nbr;
-    int alphabet[258]={ };
-    int variable[2];
-    int taille;
-    tychar(btw,s_etoile_tab,tab,alphabet,variable);
-    nbr=variable[0];
-    taille=variable[1];
-    char* schaine[nbr];
-    int indice=0;
-    for (int l = 0; l <8 ; ++l) {
-        LC *temp=s_etoile_tab[l]->premier;
-        while (temp!=NULL)
-        {
-
-            if (etoile==0)
-            {
-                debut=temp->x;
-                etoile=1;
-            } else
-            {
-
-                schaine[indice]=malloc(sizeof((temp->x-debut)));
-                strncpy(schaine[indice],btw+debut,(temp->x-debut));
-                debut=temp->x;
-                indice=indice+1;
-            }
-            temp=temp->s;
-
-        }
-
-
-    }
-    schaine[indice]=malloc(sizeof((strlen(btw)-debut)));
-    strncpy(schaine[indice],btw+debut,(strlen(btw)-debut));
-
-
-    char t;
-    char* test;
-    char alpha[taille+1];
-    ;
-    alpha[0]=' ';
-    indice=1;
-    int total=0;
-    int tempo;
-    for (int n = 0; n <258 ; ++n) {
-        if (alphabet[n]!=0)
-        {
-            tempo=alphabet[n];
-            alphabet[n]=total;
-            total=total+tempo;
-            t=n;
-
-            alpha[indice]=t;
-            indice++;
-
-
-        }
-    }
-    printf("alhabet:%s \n",alpha);
-    printf("\n debut sous chaine \n");
-    for (int m = 0; m <nbr ; ++m) {
-        printf("%s ",schaine[m]);
-
-    }
-
-    printf("fin sous chaine \n");
-    radix(schaine,alpha,nbr);
-
-
-    return 0;
-}
-
-
-void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[]){
     int s_etoile=0;
     int nbr=0;
     int s_etoile_debut;
-
+    char btw[]="mmiissiissiippii";
+    int tab[strlen(btw)];
     Liste *liste = malloc(sizeof(Liste));
     LC *chaine=malloc(sizeof(LC));
     chaine->s=NULL;
     liste->premier=chaine;
     int deb,fin;
     int coupoure[8];
-
+    Liste* s_etoile_tab[8];
     //a optimiser
-
-    variable[0]=0;
-    variable[1]=0;
+    int alphabet[258]={ };
+    int taille;
     //fin
     printf("tab debut \n");
-    /*
-    for (int k = 0; k <strlen(btw) ; ++k) {
-        printf("%i ",tab[k]);
-
-    }
-    */
     printf("\n");
 #pragma omp parallel for
     for (int j = 0; j <omp_get_num_threads() ; ++j) {
@@ -189,7 +81,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
                 temporaire=btw[i];
                 if(alphabet[temporaire]==0)
                 {
-                    variable[0]++;
+                    taille++;
                 }
                 alphabet[temporaire]++;
                 if (btw[i] > btw[i + 1]) {
@@ -218,7 +110,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
                             pointeur=pointeur->s;
                             init=1;
                             tab[egal] = 2;
-                            variable[1]++;
+                            nbr=nbr+1;
 
 
 
@@ -251,7 +143,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
                         pointeur->s=temp;
                         precedent=pointeur;
                         pointeur=pointeur->s;
-                        variable[1]++;
+                        nbr=nbr+1;
                         tab[i]=2;
                         init=1;
 
@@ -273,7 +165,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
                 temporaire=btw[i];
                 if(alphabet[temporaire]==0)
                 {
-                    variable[0]++;
+                    taille++;
                 }
                 alphabet[temporaire]++;
 
@@ -304,7 +196,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
                             pointeur=pointeur->s;
                             tab[egal] = 2;
                             init=1;
-                            variable[1]++;
+                            nbr=nbr+1;
 
 
                         } else {
@@ -336,7 +228,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
                         pointeur=pointeur->s;
                         tab[i] = 2;
                         init=1;
-                        variable[1]++;
+                        nbr=nbr+1;
                     }
 
                 } else if (i < egal) {
@@ -476,13 +368,126 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
 
     }
 
+    int etoile=0;
+    int debut;
+    char *teste;
+
+    char* schaine[nbr];
+    int indice=0;
+    for (int l = 0; l <8 ; ++l) {
+        LC *temp=s_etoile_tab[l]->premier;
+        while (temp!=NULL)
+        {
+
+            if (etoile==0)
+            {
+                debut=temp->x;
+                etoile=1;
+            } else
+            {
+
+                schaine[indice]=malloc(sizeof((temp->x-debut)));
+                strncpy(schaine[indice],btw+debut,(temp->x-debut));
+                debut=temp->x;
+                indice=indice+1;
+            }
+            temp=temp->s;
+
+        }
 
 
+    }
+    schaine[indice]=malloc(sizeof((strlen(btw)-debut)));
+    strncpy(schaine[indice],btw+debut,(strlen(btw)-debut));
+
+
+    char t;
+    char* test;
+    char alpha[taille+1];
+    ;
+    alpha[0]=' ';
+    indice=1;
+    int total=0;
+    int tempo;
+    for (int n = 0; n <258 ; ++n) {
+        if (alphabet[n]!=0)
+        {
+            tempo=alphabet[n];
+            alphabet[n]=total;
+            total=total+tempo;
+            t=n;
+
+            alpha[indice]=t;
+            indice++;
+
+
+        }
+    }
+    printf("alhabet:%s \n",alpha);
+    printf("\n debut sous chaine \n");
+    for (int m = 0; m <nbr ; ++m) {
+        printf("%s ",schaine[m]);
+
+    }
+
+    printf("fin sous chaine \n");
+    char* stexte;
+    stexte=radix(schaine,alpha,nbr);
+    printf("schaine %s",stexte);
+
+    return 0;
 }
 
 
 
-void radix(ch t,char* alphabet,int taille)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+char* radix(ch t,char* alphabet,int taille)
 {
     int tab[taille];
 
@@ -601,7 +606,10 @@ void radix(ch t,char* alphabet,int taille)
 
     }
 
-    printf("schaine %s",getname(tab,taille,t));
+    for (int m = 0; m <taille ; ++m) {
+        printf("%i ",tab[m]);
+    }
+    return getname(tab,taille,t);
 
 
 }
