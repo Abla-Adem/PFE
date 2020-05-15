@@ -1,7 +1,12 @@
+/*rendre en fonction tous les ajout a la liste des sous chaine
+ continuer la parralelisation de coupoure
+ rendre en fonction le traitement de la premiere boucle paralele*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <omp.h>
+#include <time.h>
+
 typedef char* ch[200];
 typedef struct LC LC;
 typedef int tableau[2];
@@ -19,65 +24,44 @@ char* getname(int tab[],int taille, ch t);
 void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[]);
 void extratcSstar(char* btw,Liste* s_etoile_tab[],char* shaine[],int nbr);
 void getAlphabet(int alphabet[],int taille,char* alpha);
-
-
-
-
+void addsubstring(int j,int fin,Liste* s_etoile_tab[]);
+int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int variable[],int egal,int temporaire,int d,Liste* s_etoile_tab[]);
+void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j);
+void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j);
+void init(int tab[],int fin);
 
 
 
 
 int main() {
-    /*
-    ch t;
-    t[0]=malloc(strlen("aggtg"));
-    strcpy(t[0],"aggtg");
-    t[1]=malloc(strlen("aaggc"));
-    strcpy(t[1],"aaggc");
-    t[2]=malloc(strlen("aaaaaaaaa"));
-    strcpy(t[2],"aaaaaaaaa");
-    t[3]=malloc(strlen("cccccccc"));
-    strcpy(t[3],"cccccccc");
-    t[4]=malloc(strlen("aaggca"));
-    strcpy(t[4],"aaggca");
-
-
-    printf("le tableau avant trie :");
-    for (int i = 0; i <5 ; ++i) {
-        printf("%s ",t[i]);
-    }
-    printf("\n");
-
-    radix(t);
-    printf("resultat final :");
-    for (int i = 0; i <5 ; ++i) {
-        printf("%s ",t[i]);
-    }
-    printf("\n");
-    */
+    //premiere iteration
+    clock_t start, finish;
     Liste* s_etoile_tab[8];
     char btw[]="mmiissiissiippii";
     int tab[strlen(btw)];
-
-    char *teste;
     int nbr;
     int alphabet[258]={ };
     int variable[2];
-
+    double duration;
     int taille;
+    //affectation type car
+    start=clock();
     tychar(btw,s_etoile_tab,tab,alphabet,variable);
     nbr=variable[1];
     taille=variable[0];
+    //fin
     //extraction des sous chaine
+
     char* schaine[nbr];
     extratcSstar(btw,s_etoile_tab,schaine,nbr);
     //fin extraction
+
+    //extraction alphabet
     char alpha[taille+1];
     getAlphabet(alphabet,taille,alpha);
-    //extraction alphabet
-
-    printf("alhabet:%s fin\n",alpha);
+    printf("alhabet:%s %ifin\n",alpha,strlen(alpha));
     //fin
+    //affichage sous chaine
     printf("\n debut sous chaine \n");
     for (int m = 0; m <nbr ; ++m) {
         printf("%s ",schaine[m]);
@@ -85,9 +69,21 @@ int main() {
     }
 
     printf("fin sous chaine \n");
+    //fin
+    //creation nouvelle sous chaine
     char* newchar=radix(schaine,alpha,nbr);
-    printf("%s",newchar);
-
+    printf("newchar: %s \n",newchar);
+    finish = clock();
+    duration = (double)(finish - start) / CLOCKS_PER_SEC;
+    printf( "%f seconds\n", duration );
+    //fin
+    //fin premiere iteration
+    //debut deuxieme iteration (ajout d'une condition pour voir si il faut faire une deuxieme iteration)
+    Liste* s_etoile_tab2[8];
+    int alphabet2[258]={ };
+    int tab2[strlen(newchar)];
+    int variable2[2];
+    tychar(newchar,s_etoile_tab2,tab2,alphabet2,variable2);
 
     return 0;
 }
@@ -111,6 +107,7 @@ void getAlphabet(int alphabet[],int taille,char* alpha){
             t=n;
 
             alpha[indice]=t;
+            printf("%c \n",alpha[indice]);
             indice++;
 
 
@@ -130,6 +127,7 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr)
 
             if (etoile==0)
             {
+
                 debut=temp->x;
                 etoile=1;
             } else
@@ -139,6 +137,7 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr)
                 strncpy(schaine[indice],btw+debut,(temp->x-debut));
                 debut=temp->x;
                 indice=indice+1;
+
             }
             temp=temp->s;
 
@@ -146,45 +145,27 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr)
 
 
     }
+
     schaine[indice]=malloc(sizeof((strlen(btw)-debut)));
     strncpy(schaine[indice],btw+debut,(strlen(btw)-debut));
 
 }
-
 void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[]){
-    int s_etoile=0;
-    int nbr=0;
-    int s_etoile_debut;
 
     Liste *liste = malloc(sizeof(Liste));
     LC *chaine=malloc(sizeof(LC));
     chaine->s=NULL;
     liste->premier=chaine;
-    int deb,fin;
     int coupoure[8];
-
-    //a optimiser
-
     variable[0]=0;
     variable[1]=0;
-    //fin
-    /*
-    for (int k = 0; k <strlen(btw) ; ++k) {
-        printf("%i ",tab[k]);
-
-    }
-    */
+    int f;
+    f = strlen(btw) / 8;
     printf("\n");
-#pragma omp parallel for
-    for (int j = 0; j <omp_get_num_threads() ; ++j) {
-        coupoure[j]=-1;
-    }
-#pragma omp parallel for
-    for (int j = 0; j <strlen(btw) ; ++j) {
-        tab[j]=-1;
-    }
+    init(coupoure,omp_get_num_threads());
+    init(coupoure,strlen(btw));
 
-#pragma omp parallel
+#pragma omp parallel num_threads(8)
     {
         int premier=0;
         LC *pointeur=malloc(sizeof(LC));
@@ -200,171 +181,17 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
         s_etoile_tab[d]->premier=pointeur;
         if(d==7)
         {
+            egal=traitementpar(f*d+1,strlen(btw),btw, alphabet, tab, variable,egal,temporaire,d,s_etoile_tab);
 
-            for (int i = f * d; i < strlen(btw); ++i) {
-                temporaire=btw[i];
-                if(alphabet[temporaire]==0)
-                {
-                    variable[0]++;
-                }
-                alphabet[temporaire]++;
-                if (btw[i] > btw[i + 1]) {
-                    tab[i] = 0;
+             } else {
 
-                    if(egal!=100)
-                    {
-                        for (int j = egal; j <i ; ++j) {
-                            tab[j]=0;
-                            egal=100;
-                        }
-                    }
-                } else if (btw[i] < btw[i + 1]) {
-                    tab[i] = 1;
-                    if (egal != 100) {
-                        while(tab[egal-1]==-1 & coupoure[d-1]==-1)
-                        {
-#pragma omp flush
-                        }
-                        if (tab[egal - 1] == 0 ) {
-                            pointeur->x=i;
-                            LC *temp=malloc(sizeof(LC));
-                            temp->s=NULL;
-                            pointeur->s=temp;
-                            precedent=pointeur;
-                            pointeur=pointeur->s;
-                            init=1;
-                            tab[egal] = 2;
-                            variable[1]++;
+            egal=traitementpar(f*d+1,f*(d+1),btw, alphabet, tab, variable,egal,temporaire,d,s_etoile_tab);
 
-
-
-                        } else {
-                            tab[egal] = 1;
-                        }
-                        for (int j = egal+1; j < i; ++j) {
-                            tab[j] = 1;
-
-                        }
-
-
-
-                        egal = 100;
-
-
-
-                    }
-
-                    while(tab[i-1]==-1 & coupoure[d-1]==-1)
-                    {
-#pragma omp flush
-                    }
-                    if(tab[i]==1  && tab[i-1]==0)
-                    {
-
-                        pointeur->x=i;
-                        LC *temp=malloc(sizeof(LC));
-                        temp->s=NULL;
-                        pointeur->s=temp;
-                        precedent=pointeur;
-                        pointeur=pointeur->s;
-                        variable[1]++;
-                        tab[i]=2;
-                        init=1;
-
-
-
-                    }
-
-                } else
-                if(i<egal ){
-                    egal=i;
-                }
-
-            }
-
-        } else {
-
-
-            for (int i = f * d; i < (f) * (d + 1); ++i) {
-                temporaire=btw[i];
-                if(alphabet[temporaire]==0)
-                {
-                    variable[0]++;
-                }
-                alphabet[temporaire]++;
-
-                if (btw[i] > btw[i + 1]) {
-                    tab[i] = 0;
-
-                    if (egal != 100) {
-                        for (int j = egal; j < i; ++j) {
-                            tab[j] = 0;
-                            egal = 100;
-                        }
-                    }
-                } else if (btw[i] < btw[i + 1]) {
-
-                    tab[i] = 1;
-                    if (egal != 100) {
-
-                        while(tab[egal-1]==-1 & coupoure[d-1]==-1)
-                        {
-#pragma omp flush
-                        }
-                        if (tab[egal - 1] == 0) {
-                            pointeur->x=i;
-                            LC *temp=malloc(sizeof(LC));
-                            temp->s=NULL;
-                            pointeur->s=temp;
-                            precedent=pointeur;
-                            pointeur=pointeur->s;
-                            tab[egal] = 2;
-                            init=1;
-                            variable[1]++;
-
-
-                        } else {
-                            tab[egal] = 1;
-                        }
-                        for (int j = egal + 1; j < i; ++j) {
-                            tab[j] = 1;
-
-                        }
-
-
-
-                        egal = 100;
-
-                    }
-
-                    while(tab[i-1]==-1 &coupoure[d-1]==-1 )
-                    {
-#pragma omp flush
-                    }
-
-
-                    if (tab[i] == 1 && tab[i - 1] == 0) {
-                        pointeur->x=i;
-                        LC *temp=malloc(sizeof(LC));
-                        temp->s=NULL;
-                        pointeur->s=temp;
-                        precedent=pointeur;
-                        pointeur=pointeur->s;
-                        tab[i] = 2;
-                        init=1;
-                        variable[1]++;
-                    }
-
-                } else if (i < egal) {
-                    egal = i;
-                }
-
-            }
-        }
-        if(egal!=100)
-        {
-            coupoure[d]=egal;
-        }
+                                               }
+                                               if(egal!=100)
+                                               {
+                                                   coupoure[d]=egal;
+                                               }
         if (init==0)
         {
             s_etoile_tab[d]->premier=NULL;
@@ -372,305 +199,384 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
         {
             precedent->s=NULL;
         }
-    }
-
-    printf("tab coupoure \n");
-    for (int k = 0; k <8; ++k) {
-        printf("%i ",coupoure[k]);
-
-    }
-    printf("\n");
-
-    int f,d,saut;
-
-    for (int j = 6; j >-1 ; --j) {
-        saut=0;
-
-        f = strlen(btw) / 8;
-
-        if (coupoure[j]!=-1) {
-
-            int fin = f * (j + 1);
-            int result, compteur;
-            saut = 0;
-#pragma omp parallel sections
-            {
-#pragma omp section
-                {
-                    while (btw[coupoure[j]] == btw[fin] && tab[fin] == -1) {
-                        fin++;
 
 
-                    }
-
-                    compteur = coupoure[j];
-                }
-#pragma omp section
-                {
-
-                    while (btw[coupoure[j]] == btw[compteur]) {
-                        compteur--;
-                        if (compteur == coupoure[j - saut - 1]) {
-                            saut++;
-
-                        }
-                    }
-                }
-
-            }
-            if (tab[fin] != 0 && btw[coupoure[j]] == btw[fin]) {
-                result = tab[fin];
-
-            } else if (btw[coupoure[j]] < btw[fin]) {
-                result = 1;
-
-                tab[fin]=1;
-
-            } else {
-                result = 0;
-                tab[fin]=0;
-            }
-
+                                           }
 #pragma omp parallel for
-            for (int i = compteur+1; i < fin; ++i) {
-
-
-                tab[i] = result;
-
-                if (i != 0) {
-                    if (tab[i] == 1 && tab[i - 1] == 0) {
-                        int temoraire=i/f;
-
-                        if(temoraire>=7)
-                        {
-                            LC *pointeur=s_etoile_tab[7]->premier;
-                            LC *nouveau = malloc(sizeof(LC));
-                            nouveau->s = NULL;
-                            nouveau->x = i;
-                            if(pointeur!=NULL) {
-                                while (pointeur->s != NULL) {
-                                    pointeur = pointeur->s;
-                                }
-
-                                pointeur->s = nouveau;
-                            } else{
-                                s_etoile_tab[7]->premier=nouveau;
-                            }
-                        } else
-                        {
-
-                            LC *pointeur=s_etoile_tab[temoraire]->premier;
-                            LC *nouveau = malloc(sizeof(LC));
-                            nouveau->s = NULL;
-                            nouveau->x = i;
-                            if(pointeur!=NULL) {
-                                while (pointeur->s != NULL) {
-                                    pointeur = pointeur->s;
-                                }
-
-
-                                pointeur->s = nouveau;
-                            } else
-                            {
-                                s_etoile_tab[temoraire]->premier=nouveau;
-                            }
-                        }
-                        tab[i] = 2;
-                        nbr=nbr+1;
-                    }
-                }
-            }
-
-        }
-
-        j=j-saut;
-
+    for (int i = 0; i < 8; ++i) {
+        cornercase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,i);
+        maincase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,i);
     }
+
+
+
+
+
+
+
     printf("tab fin \n");
     for (int k = 0; k <strlen(btw) ; ++k) {
         printf("%i ",tab[k]);
-
-    }
-
-
-
-}
-
-
-
+                                           }
+                                       }
 char* radix(ch t,char* alphabet,int taille)
+                                       {
+                                           int tab[taille];
+                                           char *s;
+                                           int borne_inferieur;
+                                           char u=' ';
+                                           int compteurtabbleau,position_char;
+                                           borne_inferieur=u;
+                                           int temporaire;
+                                           for (int l = 0; l < taille; ++l) {
+                                               tab[l]=l;
+                                           }
+                                           int tableau_frequence[84]={ };
+                                           int max=strlen(t[0]);
+
+                                           for (int i = 1; i <taille ; ++i) {
+
+                                               if(strlen(t[i])>max)
+                                               {
+
+                                                   max=strlen(t[i]);
+                                               }
+                                           }
+
+
+
+                                           max=max-1;
+
+
+                                           int temp;
+
+                                           for (int i = max; i>-1 ; --i) {
+                                               //a optimiser
+
+                                               int tableau_frequence[84]={ };
+
+                                               for (int j = 0; j <taille ; ++j) {
+
+                                                   if (strlen(t[j])-1 >=i)
+                                                   {
+
+                                                       temp= t[j][i];
+                                                       tableau_frequence[temp-borne_inferieur]=tableau_frequence[temp-borne_inferieur]+1;
+                                                   } else{
+                                                       tableau_frequence[0]++;
+                                                   }
+
+                                               }
+
+                                               position_char=0;
+
+                                               for (int k = 0; k <strlen(alphabet) ; ++k) {
+                                                   temp=alphabet[k];
+                                                   temporaire=tableau_frequence[temp-borne_inferieur];
+                                                   tableau_frequence[temp-borne_inferieur]=position_char;
+                                                   position_char =position_char+temporaire;
+                                               }
+
+                                               int inter;
+                                               compteurtabbleau=0;
+
+                                               while (compteurtabbleau<taille)
+                                               {
+
+                                                   if(i>=strlen(t[compteurtabbleau]))
+                                                   {
+                                                       if(compteurtabbleau==tableau_frequence[0])
+                                                       {
+
+                                                           compteurtabbleau++;
+                                                           tableau_frequence[0]++;
+                                                       } else if(tableau_frequence[0]<taille)
+                                                       {
+                                                           s=t[compteurtabbleau];
+                                                           inter=tab[compteurtabbleau];
+                                                           tab[compteurtabbleau]=tab[tableau_frequence[0]];
+
+                                                           tab[tableau_frequence[0]]=inter;
+                                                           t[compteurtabbleau]=t[tableau_frequence[0]];
+                                                           t[tableau_frequence[0]]=s;
+                                                           tableau_frequence[0]++;
+                                                       }
+                                                       else
+                                                       {
+                                                           compteurtabbleau++;
+                                                       }
+
+                                                   } else
+                                                   {
+
+                                                       temp=t[compteurtabbleau][i];
+
+                                                       if(compteurtabbleau==tableau_frequence[temp-borne_inferieur])
+                                                       {
+
+                                                           compteurtabbleau++;
+                                                           tableau_frequence[temp-borne_inferieur]++;
+                                                       } else if(tableau_frequence[temp-borne_inferieur]<taille)
+                                                       {
+                                                           s=t[compteurtabbleau];
+                                                           inter=tab[compteurtabbleau];
+                                                           tab[compteurtabbleau]=tab[tableau_frequence[temp-borne_inferieur]];
+                                                           tab[tableau_frequence[temp-borne_inferieur]]=inter;
+                                                           t[compteurtabbleau]=t[tableau_frequence[temp-borne_inferieur]];
+                                                           t[tableau_frequence[temp-borne_inferieur]]=s;
+                                                           tableau_frequence[temp-borne_inferieur]++;
+                                                       }
+                                                       else
+                                                       {
+                                                           compteurtabbleau++;
+                                                       }
+
+
+                                                   }
+                                               }
+
+                                           }
+
+
+                                           return getname(tab,taille,t);
+
+                                       }
+char* getname(int tab[],int taille, ch t)
 {
-    int tab[taille];
-    char *s;
-    int borne_inferieur;
-    char u=' ';
-    int compteurtabbleau,position_char;
-    borne_inferieur=u;
-    int temporaire;
-    for (int l = 0; l < taille; ++l) {
-        tab[l]=l;
-    }
-    int tableau_frequence[84]={ };
-    int max=strlen(t[0]);
+                                           int stop,indice,egal,boucle;
+                                           char* name;
+                                           name=malloc(taille* sizeof(char));
 
-    for (int i = 1; i <taille ; ++i) {
+                                           char sch;
+                                           name[tab[0]]=1;
+                                           for (int m = 1; m <taille ; ++m) {
 
-        if(strlen(t[i])>max)
+                                               int indice=strlen(t[m]);
+                                               if(indice==strlen(t[m-1]))
+                                               {int egal=1;
+                                                   while (indice>0 & egal==1)
+                                                   {
+                                                       if(t[m][indice]!=t[m-1][indice])
+                                                       {
+                                                           egal=0;
+                                                       }
+                                                       indice--;
+                                                   }
+                                                   if (egal==1)
+                                                   {name[tab[m]]=m;}
+                                                   else{
+                                                       name[tab[m]]=m+1;
+                                                   }
+
+                                               } else{
+                                                   name[tab[m]]=m+1;
+                                               }
+
+                                               }
+
+
+                                           return name;
+                                       }
+void addsubstring(int j,int fin,Liste* s_etoile_tab[])
+{
+
+    LC *pointeur=s_etoile_tab[j]->premier;
+    int test=0;
+    LC *nouveau = malloc(sizeof(LC));
+
+    if(pointeur!=NULL) {
+
+        while (pointeur->s != NULL) {
+
+            test=1;
+            pointeur = pointeur->s;
+        }
+
+        if(test==1){
+
+            nouveau->s = NULL;
+            nouveau->x = fin;
+            pointeur->s = nouveau;
+        } else
         {
 
-            max=strlen(t[i]);
+            pointeur->x=fin;
+            pointeur->s=NULL;
+
         }
+
+    } else
+    {
+        if(pointeur==NULL){
+
+        }
+
+        nouveau->s = NULL;
+
+        nouveau->x=fin;
+        s_etoile_tab[j]->premier=nouveau;
+
     }
+}
+int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int variable[],int egal,int temporaire,int d,Liste* s_etoile_tab[])
+{
+    for (int i = debut; i < fin; ++i) {
 
+        temporaire=btw[i];
+        if(alphabet[temporaire]==0)
+        {
+            variable[0]++;
+        }
+        alphabet[temporaire]++;
+        if (btw[i] > btw[i + 1]) {
+            tab[i] = 0;
 
-
-    max=max-1;
-
-
-    int temp;
-
-    for (int i = max; i>-1 ; --i) {
-        //a optimiser
-
-        int tableau_frequence[84]={ };
-
-        for (int j = 0; j <taille ; ++j) {
-
-            if (strlen(t[j])-1 >=i)
+            if(egal!=100)
             {
+                for (int j = egal; j <i ; ++j) {
+                    tab[j]=0;
+                    egal=100;
+                }
+            }
+        } else if (btw[i] < btw[i + 1]) {
+            tab[i] = 1;
+            if (egal != 100) {
+                if (tab[egal - 1] == 0 ) {
+                    addsubstring(d,i,s_etoile_tab);
+                    tab[egal] = 2;
+                    variable[1]++;
 
-                temp= t[j][i];
-                tableau_frequence[temp-borne_inferieur]=tableau_frequence[temp-borne_inferieur]+1;
-            } else{
-                tableau_frequence[0]++;
+
+
+                } else {
+                    tab[egal] = 1;
+                }
+                for (int j = egal+1; j < i; ++j) {
+                    tab[j] = 1;
+
+                }
+
+
+
+                egal = 100;
+
+
+
+            }
+            if(tab[i]==1  && tab[i-1]==0)
+            {
+                addsubstring(d,i,s_etoile_tab);
+                variable[1]++;
+                tab[i]=2;
+
+
+
+
             }
 
+        } else
+        if(i<egal ){
+            egal=i;
         }
 
-        position_char=0;
+    }
+    return egal;
+}
+void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j){
 
-        for (int k = 0; k <strlen(alphabet) ; ++k) {
-            temp=alphabet[k];
-            temporaire=tableau_frequence[temp-borne_inferieur];
-            tableau_frequence[temp-borne_inferieur]=position_char;
-            position_char =position_char+temporaire;
+
+
+        int fin = f * (j);
+        int temporaire=btw[fin];
+        if(alphabet[temporaire]==0)
+        {
+            variable[0]++;
         }
-
-        int inter;
-        compteurtabbleau=0;
-
-        while (compteurtabbleau<taille)
+        alphabet[temporaire]++;
+        if(btw[fin]>btw[fin+1])
         {
 
-            if(i>=strlen(t[compteurtabbleau]))
+            tab[fin]=0;
+        } else if (btw[fin]<btw[fin+1])
+        {
+
+            if(tab[fin-1]==0)
             {
-                if(compteurtabbleau==tableau_frequence[0])
-                {
 
-                    compteurtabbleau++;
-                    tableau_frequence[0]++;
-                } else if(tableau_frequence[0]<taille)
-                {
-                    s=t[compteurtabbleau];
-                    inter=tab[compteurtabbleau];
-                    tab[compteurtabbleau]=tab[tableau_frequence[0]];
-
-                    tab[tableau_frequence[0]]=inter;
-                    t[compteurtabbleau]=t[tableau_frequence[0]];
-                    t[tableau_frequence[0]]=s;
-                    tableau_frequence[0]++;
-                }
-                else
-                {
-                    compteurtabbleau++;
-                }
-
+                addsubstring(omp_get_thread_num(),fin,s_etoile_tab);
+                tab[fin]=2;
+                variable[1]++;
             } else
             {
 
-                temp=t[compteurtabbleau][i];
-
-                if(compteurtabbleau==tableau_frequence[temp-borne_inferieur])
-                {
-
-                    compteurtabbleau++;
-                    tableau_frequence[temp-borne_inferieur]++;
-                } else if(tableau_frequence[temp-borne_inferieur]<taille)
-                {
-                    s=t[compteurtabbleau];
-                    inter=tab[compteurtabbleau];
-                    tab[compteurtabbleau]=tab[tableau_frequence[temp-borne_inferieur]];
-                    tab[tableau_frequence[temp-borne_inferieur]]=inter;
-                    t[compteurtabbleau]=t[tableau_frequence[temp-borne_inferieur]];
-                    t[tableau_frequence[temp-borne_inferieur]]=s;
-                    tableau_frequence[temp-borne_inferieur]++;
-                }
-                else
-                {
-                    compteurtabbleau++;
-                }
-
+                tab[fin]=1;
 
             }
-        }
-
-    }
-
-
-    return getname(tab,taille,t);
-
-}
-char* getname(int tab[],int taille, ch t)
-{
-    int stop,indice,egal,boucle;
-    char* name;
-    name=malloc(taille* sizeof(char));
-
-    char sch;
-    for (int m = 0; m <taille-1 ; ++m) {
-        stop=m;
-        while (strlen(t[m])==strlen(t[m+1]) && m<taille-1)
-        {
-
-            m=m+1;
-        }
-        indice=strlen(t[stop]);
-        if (m!=stop){
-            egal=0;
-
         } else
         {
-            egal=1;
 
-            name[tab[m]]=m+1;
-
-        }
-
-        while (indice>-1 && egal==0)
-        {
-
-            boucle=stop;
-            while (egal==0 && boucle<=m-1 )
+            if(tab[fin+1]==1 & tab[fin-1]==0)
             {
-                if(t[boucle][indice]!=t[boucle+1][indice])
-                {
-                    egal=1;
-                }
-                boucle++;
+                addsubstring(j,fin,s_etoile_tab);
+                tab[fin]=2;
+                variable[1]++;
+            } else if(tab[fin+1]==-1)
+            {
+                coupoure[j]=fin;
+            } else
+            {
+                tab[fin]=tab[fin+1];
             }
-            indice=indice-1;
+
+
         }
-        if(egal==0 )
+        if(tab[fin+1]==1 & tab[fin]==0)
         {
+            addsubstring(j,fin+1,s_etoile_tab);
+            tab[fin+1]=2;
+            variable[1]++;
+        }
 
-            for (int i = stop; i <=m ; ++i) {
+}
+void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j){
 
-                name[tab[i]]=stop+1;
+        if(coupoure[j]!=-1)
+        {
+            if(j!=7)
+            {
+                if(coupoure[j+1]==f*(j+1))
+                {
+                    while(tab[coupoure[j+1]]==-1 )
+                    {
+#pragma omp flush
+                    }
 
 
+                }
+
+                for (int i = coupoure[j]; i <f*(j+1) ; ++i) {
+                    tab[i]=tab[f*(j+1) ];
+                }
+                if(coupoure[j]>0){
+                    if (tab[coupoure[j]]==1 & tab[coupoure[j]-1]==0)
+                    {
+                        addsubstring(j,coupoure[j],s_etoile_tab);
+                        tab[coupoure[j]]=2;
+                        variable[1]++;
+                    }
+                }
+
+
+
+            } else{
+                //a traiter
             }
         }
-    }
 
-    return name;
+}
+void init(int tab[],int fin){
+#pragma omp parallel for
+    for (int j = 0; j <fin ; ++j) {
+        tab[j]=-1;
+    }
 }
