@@ -21,13 +21,13 @@ struct Liste
 };
 char* radix(ch t,char* alpha,int taille);
 char* getname(int tab[],int taille, ch t);
-void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[]);
-void extratcSstar(char* btw,Liste* s_etoile_tab[],char* shaine[],int nbr);
+void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[],int nrb_thread);
+void extratcSstar(char* btw,Liste* s_etoile_tab[],char* shaine[],int nbr,int nbr_thread);
 void getAlphabet(int alphabet[],int taille,char* alpha);
 void addsubstring(int j,int fin,Liste* s_etoile_tab[]);
 int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int variable[],int egal,int temporaire,int d,Liste* s_etoile_tab[]);
 void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j);
-void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j);
+void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j,int nbr_thread);
 void init(int tab[],int fin);
 
 
@@ -35,8 +35,10 @@ void init(int tab[],int fin);
 
 int main() {
     //premiere iteration
+    int nbr_thread=6;
     clock_t start, finish;
-    Liste* s_etoile_tab[8];
+
+    Liste* s_etoile_tab[6];
     char btw[]="mmiissiissiippii";
     int tab[strlen(btw)];
     int nbr;
@@ -46,14 +48,16 @@ int main() {
     int taille;
     //affectation type car
     start=clock();
-    tychar(btw,s_etoile_tab,tab,alphabet,variable);
+    tychar(btw,s_etoile_tab,tab,alphabet,variable,nbr_thread);
+
     nbr=variable[1];
     taille=variable[0];
     //fin
     //extraction des sous chaine
 
     char* schaine[nbr];
-    extratcSstar(btw,s_etoile_tab,schaine,nbr);
+    extratcSstar(btw,s_etoile_tab,schaine,nbr,nbr_thread);
+
     //fin extraction
 
     //extraction alphabet
@@ -79,11 +83,12 @@ int main() {
     //fin
     //fin premiere iteration
     //debut deuxieme iteration (ajout d'une condition pour voir si il faut faire une deuxieme iteration)
-    Liste* s_etoile_tab2[8];
+    printf("nbr thread %i",nbr_thread);
+    Liste* s_etoile_tab2[6];
     int alphabet2[258]={ };
     int tab2[strlen(newchar)];
     int variable2[2];
-    tychar(newchar,s_etoile_tab2,tab2,alphabet2,variable2);
+    tychar(newchar,s_etoile_tab2,tab2,alphabet2,variable2,nbr_thread);
 
     return 0;
 }
@@ -114,13 +119,14 @@ void getAlphabet(int alphabet[],int taille,char* alpha){
         }
     }
 }
-void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr)
+void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr,int nbr_thread)
 {
     int etoile=0;
     int debut;
 
     int indice=0;
-    for (int l = 0; l <8 ; ++l) {
+    for (int l = 0; l <nbr_thread ; ++l) {
+
         LC *temp=s_etoile_tab[l]->premier;
         while (temp!=NULL)
         {
@@ -134,9 +140,11 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr)
             {
 
                 schaine[indice]=malloc(sizeof((temp->x-debut)));
-                strncpy(schaine[indice],btw+debut,(temp->x-debut));
+                strncpy(schaine[indice],btw+debut+1,(temp->x-debut));
+
                 debut=temp->x;
                 indice=indice+1;
+
 
             }
             temp=temp->s;
@@ -150,23 +158,24 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr)
     strncpy(schaine[indice],btw+debut,(strlen(btw)-debut));
 
 }
-void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[]){
+void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[],int nrb_thread){
 
     Liste *liste = malloc(sizeof(Liste));
     LC *chaine=malloc(sizeof(LC));
     chaine->s=NULL;
     liste->premier=chaine;
-    int coupoure[8];
+    int coupoure[nrb_thread];
     variable[0]=0;
     variable[1]=0;
     int f;
-    f = strlen(btw) / 8;
+    f = strlen(btw) / nrb_thread;
     printf("\n");
-    init(coupoure,omp_get_num_threads());
+    init(coupoure,nrb_thread);
     init(coupoure,strlen(btw));
 
-#pragma omp parallel num_threads(8)
+#pragma omp parallel num_threads(nrb_thread)
     {
+
         int premier=0;
         LC *pointeur=malloc(sizeof(LC));
         pointeur->s=NULL;
@@ -175,11 +184,12 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
         egal=100;
         int init=0;
         int temporaire;
-        f = strlen(btw) / omp_get_num_threads();
+        f = strlen(btw) / nrb_thread;
         d = omp_get_thread_num();
+
         s_etoile_tab[d]=malloc(sizeof(Liste));
         s_etoile_tab[d]->premier=pointeur;
-        if(d==7)
+        if(d==(nrb_thread-1))
         {
             egal=traitementpar(f*d+1,strlen(btw),btw, alphabet, tab, variable,egal,temporaire,d,s_etoile_tab);
 
@@ -200,13 +210,17 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
             precedent->s=NULL;
         }
 
+#pragma omp barrier
+        cornercase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,d);
+        maincase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,d,nrb_thread);
 
                                            }
-#pragma omp parallel for
-    for (int i = 0; i < 8; ++i) {
-        cornercase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,i);
-        maincase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,i);
+    /*
+
+    #pragma omp parallel for
+    for (int i = 0; i < nrb_thread; ++i) {
     }
+    */
 
 
 
@@ -218,6 +232,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
     for (int k = 0; k <strlen(btw) ; ++k) {
         printf("%i ",tab[k]);
                                            }
+
                                        }
 char* radix(ch t,char* alphabet,int taille)
                                        {
@@ -385,7 +400,6 @@ void addsubstring(int j,int fin,Liste* s_etoile_tab[])
     LC *nouveau = malloc(sizeof(LC));
 
     if(pointeur!=NULL) {
-
         while (pointeur->s != NULL) {
 
             test=1;
@@ -442,7 +456,9 @@ int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int varia
             tab[i] = 1;
             if (egal != 100) {
                 if (tab[egal - 1] == 0 ) {
-                    addsubstring(d,i,s_etoile_tab);
+
+                        addsubstring(d, i, s_etoile_tab);
+
                     tab[egal] = 2;
                     variable[1]++;
 
@@ -465,7 +481,9 @@ int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int varia
             }
             if(tab[i]==1  && tab[i-1]==0)
             {
-                addsubstring(d,i,s_etoile_tab);
+
+                    addsubstring(d, i, s_etoile_tab);
+
                 variable[1]++;
                 tab[i]=2;
 
@@ -487,12 +505,13 @@ void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],in
 
 
         int fin = f * (j);
-        int temporaire=btw[fin];
-        if(alphabet[temporaire]==0)
-        {
-            variable[0]++;
-        }
-        alphabet[temporaire]++;
+
+            int temporaire = btw[fin];
+            if (alphabet[temporaire] == 0) {
+                variable[0]++;
+            }
+            alphabet[temporaire]++;
+
         if(btw[fin]>btw[fin+1])
         {
 
@@ -502,8 +521,8 @@ void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],in
 
             if(tab[fin-1]==0)
             {
-
                 addsubstring(omp_get_thread_num(),fin,s_etoile_tab);
+
                 tab[fin]=2;
                 variable[1]++;
             } else
@@ -517,7 +536,9 @@ void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],in
 
             if(tab[fin+1]==1 & tab[fin-1]==0)
             {
-                addsubstring(j,fin,s_etoile_tab);
+
+                    addsubstring(j, fin, s_etoile_tab);
+
                 tab[fin]=2;
                 variable[1]++;
             } else if(tab[fin+1]==-1)
@@ -532,17 +553,19 @@ void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],in
         }
         if(tab[fin+1]==1 & tab[fin]==0)
         {
-            addsubstring(j,fin+1,s_etoile_tab);
+
+                addsubstring(j, fin + 1, s_etoile_tab);
+
             tab[fin+1]=2;
             variable[1]++;
         }
 
 }
-void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j){
+void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j,int nbr_thread){
 
         if(coupoure[j]!=-1)
         {
-            if(j!=7)
+            if(j!=(nbr_thread-1))
             {
                 if(coupoure[j+1]==f*(j+1))
                 {
@@ -560,7 +583,9 @@ void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int 
                 if(coupoure[j]>0){
                     if (tab[coupoure[j]]==1 & tab[coupoure[j]-1]==0)
                     {
-                        addsubstring(j,coupoure[j],s_etoile_tab);
+
+                            addsubstring(j, coupoure[j], s_etoile_tab);
+
                         tab[coupoure[j]]=2;
                         variable[1]++;
                     }
