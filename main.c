@@ -26,7 +26,7 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* shaine[],int nbr,int nbr
 void getAlphabet(int alphabet[],int taille,char* alpha);
 void addsubstring(int j,int fin,Liste* s_etoile_tab[]);
 int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int variable[],int egal,int temporaire,int d,Liste* s_etoile_tab[]);
-void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j);
+int cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j);
 void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j,int nbr_thread);
 void init(int tab[],int fin);
 
@@ -211,9 +211,13 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
         }
 
 #pragma omp barrier
-        cornercase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,d);
+        int reusefonction=cornercase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,d);
         maincase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,d,nrb_thread);
-
+        if (reusefonction==1)
+        {
+            printf("ici");
+            reusefonction=cornercase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,d);
+        }
                                            }
     /*
 
@@ -234,6 +238,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
                                            }
 
                                        }
+//a optimiser
 char* radix(ch t,char* alphabet,int taille)
                                        {
                                            int tab[taille];
@@ -246,6 +251,7 @@ char* radix(ch t,char* alphabet,int taille)
                                            for (int l = 0; l < taille; ++l) {
                                                tab[l]=l;
                                            }
+                                           //a revoir pk 84??
                                            int tableau_frequence[84]={ };
                                            int max=strlen(t[0]);
 
@@ -434,8 +440,7 @@ void addsubstring(int j,int fin,Liste* s_etoile_tab[])
 }
 int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int variable[],int egal,int temporaire,int d,Liste* s_etoile_tab[])
 {
-    for (int i = debut; i < fin; ++i) {
-
+    for (int i = fin-1; i > debut-1; --i) {
         temporaire=btw[i];
         if(alphabet[temporaire]==0)
         {
@@ -444,53 +449,19 @@ int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int varia
         alphabet[temporaire]++;
         if (btw[i] > btw[i + 1]) {
             tab[i] = 0;
-
-            if(egal!=100)
-            {
-                for (int j = egal; j <i ; ++j) {
-                    tab[j]=0;
-                    egal=100;
-                }
-            }
-        } else if (btw[i] < btw[i + 1]) {
-            tab[i] = 1;
-            if (egal != 100) {
-                if (tab[egal - 1] == 0 ) {
-
-                        addsubstring(d, i, s_etoile_tab);
-
-                    tab[egal] = 2;
-                    variable[1]++;
-
-
-
-                } else {
-                    tab[egal] = 1;
-                }
-                for (int j = egal+1; j < i; ++j) {
-                    tab[j] = 1;
-
-                }
-
-
-
-                egal = 100;
-
-
-
-            }
-            if(tab[i]==1  && tab[i-1]==0)
+            if(tab[i+1]==1  )
             {
 
-                    addsubstring(d, i, s_etoile_tab);
+                addsubstring(d, i+1, s_etoile_tab);
 
                 variable[1]++;
-                tab[i]=2;
-
-
-
-
+                tab[i+1]=2;
             }
+
+        } else if (btw[i] < btw[i + 1]) {
+            tab[i] = 1;
+
+
 
         } else
         if(i<egal ){
@@ -500,10 +471,11 @@ int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int varia
     }
     return egal;
 }
-void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j){
+
+int cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j){
 
 
-
+        int reusefonction=0;
         int fin = f * (j);
 
             int temporaire = btw[fin];
@@ -525,7 +497,12 @@ void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],in
 
                 tab[fin]=2;
                 variable[1]++;
-            } else
+            }
+            else if(tab[fin-1]==-1)
+            {
+                reusefonction=1;
+            }
+            else
             {
 
                 tab[fin]=1;
@@ -559,7 +536,7 @@ void cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],in
             tab[fin+1]=2;
             variable[1]++;
         }
-
+    return reusefonction;
 }
 void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j,int nbr_thread){
 
