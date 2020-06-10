@@ -74,18 +74,25 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr,int nb
                 etoile=1;
             } else
             {
-                int taille=((temp->x-debut))+2;
-                schaine[indice]=malloc(sizeof(taille));
+                int taille=((temp->x-debut))+1;
+                schaine[indice]=malloc(sizeof(char)*(taille+2));
+                strncpy(schaine[indice],btw+debut,taille);
+                char test=0;
+                if (schaine[indice][taille] !=test ) {
+                    printf("\n rah %s\n",schaine[indice]);
+                    schaine[indice][taille] = 0;
+                }
 
                 printf("\n %s \n",schaine[indice]);
 
-                strncpy(schaine[indice],btw+debut,taille);
+                printf("\n taille %i %i %i %i",taille,debut,strlen(btw),strlen(schaine[indice]));
                 position[positionindice]=debut;
                 positionindice++;
                 debut=temp->x;
+
                 printf("\n %s \n",schaine[indice]);
                 indice=indice+1;
-
+                printf("ici");
 
 
             }
@@ -98,56 +105,69 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr,int nb
 
 
 
-    schaine[indice]=malloc(sizeof((strlen(btw)-debut)));
+    schaine[indice]=malloc(sizeof((strlen(btw)-debut+2)));
 
     strncpy(schaine[indice],btw+debut,(strlen(btw)-debut)+1);
 
     position[positionindice]=debut;
 
 }
-void addsubstring(int j,int fin,Liste* s_etoile_tab[])
+void addsubstring(int j,int fin,Liste* s_etoile_tab[],int direction)
 {
 
     int existedeja=0;
     LC *pointeur=s_etoile_tab[j]->premier;
     int test=0;
-    LC *nouveau = malloc(sizeof(LC));
+    LC *nouveau = malloc(sizeof(LC)+1);
+    if(direction==0) {
+        if (pointeur != NULL) {
 
-    if(pointeur!=NULL) {
+            while (pointeur->s != NULL) {
 
-        while (pointeur->s != NULL) {
-
-            test = 1;
+                test = 1;
 
                 pointeur = pointeur->s;
 
-        }
+            }
 
-        if (test == 1) {
 
             nouveau->s = NULL;
             nouveau->x = fin;
             pointeur->s = nouveau;
-            printf(" ajout 1 %i ",fin);
+
+
         } else {
-            printf(" ajout 2 %i ",fin);
-            pointeur->x = fin;
-            pointeur->s = NULL;
+
+
+            nouveau->s = NULL;
+
+            nouveau->x = fin;
+            s_etoile_tab[j]->premier = nouveau;
 
         }
-
-
     } else
     {
+        if (pointeur != NULL) {
 
-        printf(" ajout 3 %i ",fin);
-        nouveau->s = NULL;
 
-        nouveau->x=fin;
-        s_etoile_tab[j]->premier=nouveau;
 
+
+            nouveau->s = pointeur;
+            nouveau->x = fin;
+            pointeur->s = NULL;
+            s_etoile_tab[j]->premier = nouveau;
+
+
+        } else {
+
+
+            nouveau->s = NULL;
+
+            nouveau->x = fin;
+            s_etoile_tab[j]->premier = nouveau;
+
+        }
     }
-
 }
 int cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j){
 
@@ -170,7 +190,7 @@ int cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int
         if(tab[fin-1]==0)
         {
             printf("\nici %i %i %i\n",j,tab[fin-1],fin-1);
-            addsubstring(omp_get_thread_num(),fin,s_etoile_tab);
+            addsubstring(omp_get_thread_num(),fin,s_etoile_tab,0);
 
             tab[fin]=2;
             variable[1]++;
@@ -192,7 +212,7 @@ int cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int
         if (j == 0) {
 
             if(tab[fin+1]==1){
-                addsubstring(j, fin, s_etoile_tab);
+                addsubstring(j, fin, s_etoile_tab,0);
                 tab[fin] = 2;
                 variable[1]++;
                 printf("\n ici 1 \n");
@@ -213,7 +233,7 @@ int cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int
             {
             if (tab[fin + 1] == 1 & tab[fin - 1] == 0) {
                 printf("zebi");
-                addsubstring(j, fin, s_etoile_tab);
+                addsubstring(j, fin, s_etoile_tab,0);
 
                 tab[fin] = 2;
                 variable[1]++;
@@ -231,7 +251,7 @@ int cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int
     if(tab[fin+1]==1 & tab[fin]==0)
     {
 
-        addsubstring(j, fin + 1, s_etoile_tab);
+        addsubstring(j, fin + 1, s_etoile_tab,0);
 
         tab[fin+1]=2;
         variable[1]++;
@@ -281,7 +301,7 @@ void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int 
                 if (tab[coupoure[j]]==1 & tab[coupoure[j]-1]==0 && nonajout==0)
                 {
 
-                    addsubstring(j, coupoure[j], s_etoile_tab);
+                    addsubstring(j, coupoure[j], s_etoile_tab,0);
 
                     tab[coupoure[j]]=2;
                     variable[1]++;
@@ -303,7 +323,7 @@ void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int 
 
 int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int variable[],int egal,int temporaire,int d,Liste* s_etoile_tab[],int j)
 {   int coup=0;
-    //printf("\n debut %i\n",fin-1);
+
 
 for (int i = fin-1; i > debut-1; --i) {
 
@@ -318,9 +338,9 @@ for (int i = fin-1; i > debut-1; --i) {
 
             if(tab[i+1]==1  )
             {
-                printf("traites %i ",i);
-                addsubstring(d, i+1, s_etoile_tab);
-                printf("traite %i ",i);
+
+                addsubstring(d, i+1, s_etoile_tab,1);
+
                 variable[1]++;
 
                 tab[i+1]=2;
@@ -332,12 +352,14 @@ for (int i = fin-1; i > debut-1; --i) {
 
 
         } else{
+
             if(i==fin-1){
                 coup=1;
                 egal=i;
-            } else if (coup==1)
+            } else if (coup==1 && egal==(i+1))
             {
                 if(btw[i]==btw[egal]){
+
                     egal=i;
                 }
 
@@ -351,7 +373,7 @@ for (int i = fin-1; i > debut-1; --i) {
                     tab[i]=1;
                 } else
                 {
-                    //printf("traite %i",i);
+
                     tab[i]=tab[i+1];
                 }
             }
@@ -366,10 +388,7 @@ for (int i = fin-1; i > debut-1; --i) {
 
 void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[],int nrb_thread) {
 
-    Liste *liste = malloc(sizeof(Liste));
-    LC *chaine = malloc(sizeof(LC));
-    chaine->s = NULL;
-    liste->premier = chaine;
+
     int coupoure[nrb_thread];
     variable[0] = 0;
     variable[1] = 0;
@@ -381,8 +400,10 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
     init(tab, strlen(btw));
 
     if (nrb_thread*2>strlen(btw)) {
+
         for (int i = 0; i <nrb_thread ; ++i) {
-            s_etoile_tab[i] = malloc(sizeof(Liste));
+            printf("peut etre ici %i %i \n",i,nrb_thread);
+            s_etoile_tab[i] = malloc(sizeof(Liste)+1);
             s_etoile_tab[i]->premier = NULL;
         }
 
@@ -399,7 +420,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
     {
 
         int premier = 0;
-        LC *pointeur = malloc(sizeof(LC));
+        LC *pointeur = malloc(sizeof(LC)+1);
         pointeur->s = NULL;
         LC *precedent;
         int f, d, egal;
@@ -409,7 +430,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
         f = strlen(btw) / nrb_thread;
         d = omp_get_thread_num();
 
-        s_etoile_tab[d] = malloc(sizeof(Liste));
+        s_etoile_tab[d] = malloc(sizeof(Liste)+1);
         s_etoile_tab[d]->premier = NULL;
 
         if (d == (nrb_thread - 1)) {
@@ -481,19 +502,22 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
 
 }
 //a optimiser
-char* getname(int tab[],int taille, char* t[])
+int getname(int tab[],int taille, char* t[],char* name)
 {
+    int unique=1;
     int stop,indice,egal,boucle;
-    char* name;
-    name=malloc(taille* sizeof(char));
-    printf("\ntab indice getname \n");
+    printf("\n%i tab indice getname \n",taille);
     for (int i = 0; i <taille ; ++i) {
         printf("%i ",tab[i]);
+
     }
     char sch;
     int precedent=1;
     name[tab[0]]=1;
-
+    if(taille==1){
+    name[1]=0;
+    name[2]=0;
+    }
     for (int m = 1; m <taille ; ++m) {
 
         int indice=strlen(t[m])-1;
@@ -511,6 +535,7 @@ char* getname(int tab[],int taille, char* t[])
             }
             if (egal==1)
             {name[tab[m]]=precedent;
+            unique=0;
                 }
             else{
                 precedent=m+1;
@@ -524,21 +549,27 @@ char* getname(int tab[],int taille, char* t[])
         }
 
     }
+    for (int j = taille; j <strlen(name) ; ++j) {
+        name [j]=0;
 
-
-    return name;
+    }
+    printf("name %s %i %i",name,strlen(name),taille);
+    return unique;
 }
-char* radix(char* t[],char* alphabet,int taille,int position[])
+
+int radix(char* t[],char* alphabet,int taille,int position[],char* name)
 {
     int tab[taille];
+    int tp[taille];
     char *s;
+    char *c;
     int borne_inferieur;
     char u=' ';
     int compteurtabbleau,position_char;
     borne_inferieur=u;
     int temporaire;
     for (int l = 0; l < taille; ++l) {
-        tab[l]=l;
+        tp[l]=l;
     }
     //a revoir pk 84??
     int tableau_frequence[84]={ };
@@ -586,89 +617,67 @@ char* radix(char* t[],char* alphabet,int taille,int position[])
             tableau_frequence[temp-borne_inferieur]=position_char;
             position_char =position_char+temporaire;
         }
-
-        int inter,inter2;
-        compteurtabbleau=0;
-
-        while (compteurtabbleau<taille)
-        {
-
-            if(i>=strlen(t[compteurtabbleau]))
-            {
-                if(compteurtabbleau==tableau_frequence[0])
-                {
-
-                    compteurtabbleau++;
-                    tableau_frequence[0]++;
-                } else if(tableau_frequence[0]<taille)
-                {
-                    s=t[compteurtabbleau];
-                    inter=tab[compteurtabbleau];
-                    tab[compteurtabbleau]=tab[tableau_frequence[0]];
-
-                    tab[tableau_frequence[0]]=inter;
-
-                    inter2=position[compteurtabbleau];
-                    position[compteurtabbleau]=position[tableau_frequence[0]];
-
-                    position[tableau_frequence[0]]=inter2;
-
-                    t[compteurtabbleau]=t[tableau_frequence[0]];
-                    t[tableau_frequence[0]]=s;
-                    tableau_frequence[0]++;
-                }
-                else
-                {
-                    compteurtabbleau++;
-                }
-
+        for (int l = 0; l <taille ; ++l) {
+            if(i>=strlen(t[l])){
+                tab[l]=tableau_frequence[0];
+                tableau_frequence[0]++;
             } else
             {
+                temp=t[l][i];
 
-                temp=t[compteurtabbleau][i];
-
-                if(compteurtabbleau==tableau_frequence[temp-borne_inferieur])
-                {
-
-                    compteurtabbleau++;
-                    tableau_frequence[temp-borne_inferieur]++;
-                } else if(tableau_frequence[temp-borne_inferieur]<taille)
-                {
-                    s=t[compteurtabbleau];
-                    inter=tab[compteurtabbleau];
-                    tab[compteurtabbleau]=tab[tableau_frequence[temp-borne_inferieur]];
-                    tab[tableau_frequence[temp-borne_inferieur]]=inter;
-
-                    inter2=position[compteurtabbleau];
-                    position[compteurtabbleau]=position[tableau_frequence[temp-borne_inferieur]];
-                    position[tableau_frequence[temp-borne_inferieur]]=inter2;
-
-                    t[compteurtabbleau]=t[tableau_frequence[temp-borne_inferieur]];
-                    t[tableau_frequence[temp-borne_inferieur]]=s;
-                    tableau_frequence[temp-borne_inferieur]++;
-                }
-                else
-                {
-                    compteurtabbleau++;
-                }
-
-
+                tab[l]=tableau_frequence[temp-borne_inferieur];
+                tableau_frequence[temp-borne_inferieur]++;
             }
         }
 
-      /*  printf("\n chaine trie \n");
+        int inter=0;
+        int inter2;
+        compteurtabbleau=0;
+        inter=tp[0];
+        char* temp=t[0];
+        char* temp2;
+        for (int n = 0; n <taille ; ++n) {
+            temp2=t[tab[compteurtabbleau]];
+            inter2=tp[tab[compteurtabbleau]];
+            tp[tab[compteurtabbleau]]=inter;
+            t[tab[compteurtabbleau]]=temp;
+            temp=temp2;
+            inter=inter2;
+            if(compteurtabbleau==tab[compteurtabbleau])
+            {
+
+                compteurtabbleau++;
+                temp=t[compteurtabbleau];
+                inter=tp[compteurtabbleau];
+            } else
+            {
+                compteurtabbleau=tab[compteurtabbleau];
+            }
+
+        }
+
+        printf("tab :\n");
+        for (int m = 0; m <taille ; ++m) {
+            printf("%i / %i |",tp[m],tab[m]);
+        }
+        printf("\n");
+        printf("trie :\n");
         for (int m = 0; m <taille ; ++m) {
             printf("%s ",t[m]);
         }
-        */
+        printf("\n");
+
     }
 
-    return getname(tab,taille,t);
+
+    return getname(tp,taille,t,name);
 
 }
 char* induced_first_iteration(char* btw,int nbr_thread,int tab[])
 {
+
     Liste* s_etoile_tab[nbr_thread];
+
     int nbr;
     int alphabet[258]={ };
     int variable[2];
@@ -683,12 +692,12 @@ char* induced_first_iteration(char* btw,int nbr_thread,int tab[])
     //fin
     //extraction des sous chaine
     printf("nbr %i",nbr);
-
+    char* newchar="";
+    newchar=malloc(taille* sizeof(char));
     char* schaine[nbr];
     int position[nbr];
 
     extratcSstar(btw,s_etoile_tab,schaine,nbr,nbr_thread,position);
-
 
     //fin extraction
 
@@ -708,14 +717,16 @@ char* induced_first_iteration(char* btw,int nbr_thread,int tab[])
     printf("fin sous chaine \n");
     //fin
     //creation nouvelle sous chaine
-    char* newchar=radix(schaine,alpha,nbr,position);
-    printf("newchar: %s \n",newchar);
-    printf("\n");
-    for (int i = 0; i <nbr ; ++i) {
-        printf("%i ",position[i]);
-    }
-    return newchar;
+    if(nbr!=0 ) {
+     int unique   = radix(schaine, alpha, nbr, position,newchar);
+        printf("newchar: %s %i \n", newchar,unique);
 
+
+    return newchar;
+    }
+    else {
+        return " ";
+    }
 }
 
 
@@ -723,11 +734,11 @@ char* induced_first_iteration(char* btw,int nbr_thread,int tab[])
 
 int main() {
     //premiere iteration
-    int nbr_thread=4;
+    int nbr_thread=2;
     clock_t start, finish;
 
     double duration;
-    char btw[]="mmiissiiiiiiiiiiiissiippii";
+    char btw[]="mmiissiissiippiiiiiii";
     int tab[strlen(btw)];
 
     start=clock();
@@ -736,10 +747,11 @@ int main() {
     duration = (double)(finish - start) / CLOCKS_PER_SEC;
     printf( " \n%f seconds\n", duration );
     printf("fin premiere iteration %s\n",seconditeration);
+
     //fin
     //fin premiere iteration
     int tab2[strlen(seconditeration)];
-    induced_first_iteration(seconditeration,nbr_thread,tab2);
+    char* test=induced_first_iteration(seconditeration,nbr_thread,tab2);
 
     //debut deuxieme iteration (ajout d'une condition pour voir si il faut faire une deuxieme iteration)
  /*
