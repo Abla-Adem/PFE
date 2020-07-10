@@ -66,7 +66,7 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr,int nb
 
         while (temp!=NULL)
         {
-            printf("ici %i",l);
+
             if (etoile==0)
             {
 
@@ -79,13 +79,12 @@ void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr,int nb
                 strncpy(schaine[indice],btw+debut,taille);
                 char test=0;
                 if (schaine[indice][taille] !=test ) {
-                    printf("\n rah %s\n",schaine[indice]);
+
                     schaine[indice][taille] = 0;
                 }
 
-                printf("\n %s \n",schaine[indice]);
 
-                printf("\n taille %i %i %i %i",taille,debut,strlen(btw),strlen(schaine[indice]));
+
                 position[positionindice]=debut;
                 positionindice++;
                 debut=temp->x;
@@ -232,7 +231,7 @@ int cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int
         else
             {
             if (tab[fin + 1] == 1 & tab[fin - 1] == 0) {
-                printf("zebi");
+
                 addsubstring(j, fin, s_etoile_tab,0);
 
                 tab[fin] = 2;
@@ -402,7 +401,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
     if (nrb_thread*2>strlen(btw)) {
 
         for (int i = 0; i <nrb_thread ; ++i) {
-            printf("peut etre ici %i %i \n",i,nrb_thread);
+
             s_etoile_tab[i] = malloc(sizeof(Liste)+1);
             s_etoile_tab[i]->premier = NULL;
         }
@@ -414,7 +413,7 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
         printf(" fini?");
     } else {
 
-
+        int nbrstop[nrb_thread];
 
 #pragma omp parallel num_threads(nrb_thread)
     {
@@ -458,18 +457,14 @@ void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variabl
         printf(" \ntab \n");
     }
     */
-    }
-    int nbrstop[nrb_thread];
-#pragma omp parallel for num_threads(nrb_thread)
-    for (int j = 0; j < nrb_thread; ++j) {
-        nbrstop[j] = cornercase(btw, alphabet, variable, s_etoile_tab, tab, f, coupoure, j);
+    #pragma omp barrier
+            nbrstop[d] = cornercase(btw, alphabet, variable, s_etoile_tab, tab, f, coupoure, d);
+    #pragma omp barrier
+            maincase(btw, alphabet, variable, s_etoile_tab, tab, f, coupoure, d, nrb_thread, strlen(btw), nbrstop[d]);
     }
 
 
-#pragma omp parallel for num_threads(nrb_thread)
-    for (int j = 0; j < nrb_thread; ++j) {
-        maincase(btw, alphabet, variable, s_etoile_tab, tab, f, coupoure, j, nrb_thread, strlen(btw), nbrstop[j]);
-    }
+
 }
 
 
@@ -656,16 +651,6 @@ int radix(char* t[],char* alphabet,int taille,int position[],char* name)
 
         }
 
-        printf("tab :\n");
-        for (int m = 0; m <taille ; ++m) {
-            printf("%i / %i |",tp[m],tab[m]);
-        }
-        printf("\n");
-        printf("trie :\n");
-        for (int m = 0; m <taille ; ++m) {
-            printf("%s ",t[m]);
-        }
-        printf("\n");
 
     }
 
