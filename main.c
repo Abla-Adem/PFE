@@ -1,773 +1,439 @@
-/*rendre en fonction tous les ajout a la liste des sous chaine
- continuer la parralelisation de coupoure
- rendre en fonction le traitement de la premiere boucle paralele*/
 #include <stdio.h>
 #include <stdlib.h>
+#define hsize 65535
 #include <string.h>
-#include <omp.h>
-#include <time.h>
-typedef struct LC LC;
-struct LC{
-    int x;
-    LC* s;
-};
-typedef struct Liste Liste;
-struct Liste
+#include "malloc_count.h"
+typedef struct {
+    unsigned int indice_posh;
+    unsigned int hsize_names;
+
+} lmstab;
+typedef struct {
+    int *tab;
+    int indice;
+    int taille;
+} htab;
+typedef struct {
+    char *car;
+    unsigned short hpos;
+
+}save;
+typedef struct {
+    save *mot;
+    int indice;
+    int taille;
+} lms_div;
+
+int myCompare2 (const void * a, const void * b ) {
+    const lmstab pa = *(const lmstab*)a;
+    const lmstab pb = *(const lmstab*)b;
+
+    return (pa.indice_posh & 0x3FFFFFF)-(pb.indice_posh & 0x3FFFFFF);
+}
+int myCompare (const void * a, const void * b ) {
+    const save pa = *(const save*)a;
+    const save pb = *(const save*)b;
+
+    return strcmp(pa.car,pb.car);
+}
+static int hfunc(int m, char *p)
 {
-    LC *premier;
-};
+    unsigned long x;
+    unsigned int i;
+
+    x = 0;
+    for (i=0; i<m; i++) {
+
+        x *= 101;
+
+        x += *p++;
+    }
+    x %= hsize;
+
+    return x;
+}
+//////////////////////////////////////////////////////
+void set_lms_indice(int i ,int indice, lmstab *tablms)
+{
+
+    tablms[i].indice_posh |= indice ;
+
+}
+int get_lms_indice(int i, lmstab *tablms)
+{
+
+    return tablms[i].indice_posh & 0x3FFFFFF;
+}
+void set_lms_posh(int i, int posh,lmstab *tablms)
+{
+
+    tablms[i].indice_posh |= posh << 26 ;
 
 
-typedef char* ch[200];
-void init(int tab[],int fin){
-#pragma omp parallel for
-    for (int j = 0; j <fin ; ++j) {
-        tab[j]=-1;
+}
+
+int get_lms_posh(int i , lmstab *tablms)
+{
+    return tablms[i].indice_posh >> 26;
+}
+//////////////////////////////////////////////////////
+void set_lms_hsize(int i, int hs,lmstab *tablms)
+{
+
+    tablms[i].hsize_names |= hs;
+
+}
+int get_lms_hsize(int i , lmstab *tablms)
+{
+    return tablms[i].hsize_names & 0xFFFF;
+}
+void  set_lms_names(int i ,int name , lmstab *tablms)
+{
+    tablms[i].indice_posh << 16;
+}
+int get_lms_names(int i , lmstab *tablms)
+{
+    return tablms[i].indice_posh >> 16;
+}
+void init_hash_tab(htab *h)
+{
+
+    for (int i = 0; i <hsize ; ++i) {
+        h[i].indice=0;
+        h[i].tab=malloc(sizeof(int)*10);
+        h[i].taille=10;
     }
 }
-void getAlphabet(int alphabet[],int taille,char* alpha){
-    char t;
-    char* test;
-
-
-    alpha[0]=' ';
-    int indice=1;
-    int total=0;
-    int tempo;
-    for (int n = 0; n <258 ; ++n) {
-        if (alphabet[n]!=0)
-        {
-
-            tempo=alphabet[n];
-            alphabet[n]=total;
-            total=total+tempo;
-            t=n;
-
-            alpha[indice]=t;
-
-            indice++;
-
-
-        }
-    }
+void init_lms_div(lms_div *mot_div)
+{
+    mot_div->mot=malloc(sizeof(save)*100000);
+    mot_div->taille=100000;
+    mot_div->indice=0;
 }
-void extratcSstar(char* btw,Liste* s_etoile_tab[],char* schaine[],int nbr,int nbr_thread,int position[])
+void init_lms_tab(lmstab *stab)
 {
 
-    int etoile=0;
-    int debut;
+    for (int i = 0; i <1000000 ; ++i) {
+        stab[i].indice_posh=0;
+        stab[i].hsize_names=0;
+    }
 
-    int indice=0;
-    int positionindice=0;
+}
+int addlms(htab *h,lmstab *stab,int indicestab,int taillech,char *chaine,int indicechar,int taillestab, lms_div *mot_div)
+{
 
-    for (int l = 0; l <nbr_thread ; ++l) {
 
-        LC *temp=s_etoile_tab[l]->premier;
+    //pour table de hash
 
-        while (temp!=NULL)
-        {
+    //pour lms_div
+    int provisoire;
+    int posh=0;
+    int hvalue=hfunc(taillech,chaine);
+    //printf("%d \n",hvalue);
+    int s=h[hvalue].indice;
+    int k=0,k1;
 
-            if (etoile==0)
+    //pour lms_tab
+
+
+    // printf("hash is %d \n",hvalue);
+    if (h[hvalue].indice!=0)//
+    {
+
+        int bool=1,bool2=1;
+        int ind=-1;
+        int i=0;
+
+
+
+        while (i< h[hvalue].indice && bool==1){
+            //printf("  %s  %s %d \n" ,mot_div->mot[h[hvalue].tab[i]],debch,strcmp(debch,mot_div->mot[h[hvalue].tab[i]]) );
+
+            int w=strlen(mot_div->mot[h[hvalue].tab[i]].car);
+            k=indicechar;k1=0;
+            bool2=1;
+            while (k<(taillech+indicechar) && k1<w && bool2==1)
             {
+                //printf("(%c %c)",mot_div->mot[h[hvalue].tab[i]].car[k1],chaine[k]);
+                if(mot_div->mot[h[hvalue].tab[i]].car[k1]!=chaine[k])
+                {
 
-                debut=temp->x;
-                etoile=1;
-            } else
-            {
-                int taille=((temp->x-debut))+1;
-                schaine[indice]=malloc(sizeof(char)*(taille+2));
-                strncpy(schaine[indice],btw+debut,taille);
-                char test=0;
-                if (schaine[indice][taille] !=test ) {
-
-                    schaine[indice][taille] = 0;
+                    bool2=0;
+                    posh=i;
                 }
-
-
-
-                position[positionindice]=debut;
-                positionindice++;
-                debut=temp->x;
-
-                printf("\n %s \n",schaine[indice]);
-                indice=indice+1;
-                printf("ici");
-
-
+                k++;
+                k1++;
             }
-            temp=temp->s;
+            if(k==(taillech+indicechar))
+            {
+                posh=i;
+                bool=0;
+            }
+          //  printf("pos:%d",posh);
+            /*
+            if(strcmp(chaine,mot_div->mot[h[hvalue].tab[i]].car) == 0)
+            {
 
+                //mathch
+                bool=1;
+                posh=i;
+
+
+                // printf("match \n");
+
+            }*/
+            i++ ;
         }
 
 
-    }
+        //printf("bool:%d",bool);
+
+        if (bool==1)
+        {
+            //printf("ici ");
+            posh=i;
+            //insertion
+            mot_div->mot[mot_div->indice].car=malloc(sizeof(char)*(taillech+1));
+            provisoire=i;
+
+            for (int i = 0; i <taillech; ++i) {
+                //printf("%c",chaine[i+indicechar]);
+                    mot_div->mot[mot_div->indice].car[i]=chaine[i+indicechar];
 
 
+            }
+            //printf("\n");
 
-    schaine[indice]=malloc(sizeof((strlen(btw)-debut+2)));
+            //insertion_posh
+            //mot_div->mot[mot_div->indice][taillech]=provisoire;
+            //int alpha=mot_div->mot[mot_div->indice][taillech-1];
 
-    strncpy(schaine[indice],btw+debut,(strlen(btw)-debut)+1);
+            //printf("%d ",alpha);
+            set_lms_posh(indicestab,posh,stab);
+            //mot_div->mot[h[hvalue].tab[i]].hpos=i;
 
-    position[positionindice]=debut;
-
-}
-void addsubstring(int j,int fin,Liste* s_etoile_tab[],int direction)
-{
-
-    int existedeja=0;
-    LC *pointeur=s_etoile_tab[j]->premier;
-    int test=0;
-    LC *nouveau = malloc(sizeof(LC)+1);
-    if(direction==0) {
-        if (pointeur != NULL) {
-
-            while (pointeur->s != NULL) {
-
-                test = 1;
-
-                pointeur = pointeur->s;
-
+            if (h[hvalue].indice==h[hvalue].taille)
+            {
+                // printf("once been here hash");
+                h[hvalue].tab=realloc(h[hvalue].tab, sizeof(int)*(h[hvalue].taille+10));
+                h[hvalue].taille=h[hvalue].taille+10;
             }
 
 
-            nouveau->s = NULL;
-            nouveau->x = fin;
-            pointeur->s = nouveau;
+            h[hvalue].tab[h[hvalue].indice]=mot_div->indice;
+            h[hvalue].indice++;
+            mot_div->indice++;
+        } else{
+            //nesha9ouha
 
-
-        } else {
-
-
-            nouveau->s = NULL;
-
-            nouveau->x = fin;
-            s_etoile_tab[j]->premier = nouveau;
-
+            set_lms_posh(indicestab,posh,stab);
+            //posh=-1;
         }
+
+
     } else
     {
-        if (pointeur != NULL) {
 
+        //insertion
+        mot_div->mot[mot_div->indice].car=malloc(sizeof(char)*(taillech+2));
 
+        for (int i = 0; i <taillech; ++i) {
+               // printf("%c",chaine[i+indicechar]);
 
-
-            nouveau->s = pointeur;
-            nouveau->x = fin;
-            pointeur->s = NULL;
-            s_etoile_tab[j]->premier = nouveau;
-
-
-        } else {
-
-
-            nouveau->s = NULL;
-
-            nouveau->x = fin;
-            s_etoile_tab[j]->premier = nouveau;
+                mot_div->mot[mot_div->indice].car[i]=chaine[i+indicechar];
 
         }
+       // printf("\n");
+
+        //mot_div->mot[mot_div->indice][taillech]=0;
+        //int alpha=mot_div->mot[mot_div->indice][taillech-1];
+        //printf("%d ",alpha);
+        set_lms_posh(indicestab,0,stab);
+        //mot_div->mot[mot_div->indice].hpos=0;
+        h[hvalue].tab[h[hvalue].indice]=mot_div->indice;
+        h[hvalue].indice++;
+        mot_div->indice++;
     }
+
+    //
+
+
+    // free(chaine);
+    stab[indicestab].indice_posh=0;
+    stab[indicestab].hsize_names=0;
+    set_lms_indice(indicestab,indicechar,stab);
+
+    //set_lms_posh(indicestab,s,stab);
+    set_lms_hsize(indicestab,hvalue,stab);
+    ///
+    //printf("poseh %d %s",h[hvalue].tab[posh]);
+
+    //printf("posh:%d\n",posh);
+    return posh;
 }
-int cornercase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j){
-
-
-    int reusefonction=0;
-    int fin = f * (j);
-    int temporaire = btw[fin];
-    if (alphabet[temporaire] == 0) {
-        variable[0]++;
-    }
-    alphabet[temporaire]++;
-
-    if(btw[fin]>btw[fin+1])
-    {
-
-        tab[fin]=0;
-    } else if (btw[fin]<btw[fin+1])
-    {
-
-        if(tab[fin-1]==0)
-        {
-            printf("\nici %i %i %i\n",j,tab[fin-1],fin-1);
-            addsubstring(omp_get_thread_num(),fin,s_etoile_tab,0);
-
-            tab[fin]=2;
-            variable[1]++;
-            printf("\n ici 0 \n");
-        }
-        else if(tab[fin-1]==-1)
-        {
-
-            tab[fin]=1;
-            reusefonction=fin;
-        }
-        else
-        {
-
-            tab[fin]=1;
-
-        }
-    } else {
-        if (j == 0) {
-
-            if(tab[fin+1]==1){
-                addsubstring(j, fin, s_etoile_tab,0);
-                tab[fin] = 2;
-                variable[1]++;
-                printf("\n ici 1 \n");
-            }
-            else if(tab[fin+1]==2)
-            {
-                tab[fin]=1;
-            }
-            else if(tab[fin+1]==0){
-                tab[fin]=0;
-            } else{
-                coupoure[j] = fin;
-            }
-
-        }
-
-        else
-            {
-            if (tab[fin + 1] == 1 & tab[fin - 1] == 0) {
-
-                addsubstring(j, fin, s_etoile_tab,0);
-
-                tab[fin] = 2;
-                variable[1]++;
-            } else if (tab[fin + 1] == -1 ) {
-
-
-                coupoure[j] = fin;
-            } else {
-                tab[fin] = tab[fin + 1];
-            }
-
-        }
-
-    }
-    if(tab[fin+1]==1 & tab[fin]==0)
-    {
-
-        addsubstring(j, fin + 1, s_etoile_tab,0);
-
-        tab[fin+1]=2;
-        variable[1]++;
-        printf("\n  ici 3 \n");
-    }
-    return reusefonction;
-}
-void maincase(char* btw,int alphabet[],int variable[],Liste* s_etoile_tab[],int tab[],int f,int coupoure[],int j,int nbr_thread,int taille,int barsup){
-    int flash;
-    int nonajout=0;
-
-        barsup=f*(j+1);
-
-    if(coupoure[j]!=-1)
-    {
-        if(j!=(nbr_thread-1))
-        {
-
-            if(coupoure[j+1]==f*(j+1))
-            {
-                flash=tab[coupoure[j+1]];
-                while(flash==-1)
-                {
-                    flash=tab[coupoure[j+1]];
-
-
-                #pragma omp flush(flash)
-                }
-
-
-
-
-            }
-
-            for (int i = coupoure[j]; i <barsup ; ++i) {
-                //printf(" \nlabas %i %i %i\n",j,tab[f*(j+1) ],i);
-                if(tab[f*(j+1) ]==2){
-
-                    tab[i]=1;
-                    nonajout=1;
-                }
-                else {
-                    tab[i] = tab[f * (j + 1)];
-                }
-                }
-            if(coupoure[j]>0){
-                if (tab[coupoure[j]]==1 & tab[coupoure[j]-1]==0 && nonajout==0)
-                {
-
-                    addsubstring(j, coupoure[j], s_etoile_tab,0);
-
-                    tab[coupoure[j]]=2;
-                    variable[1]++;
-                    printf("zebi 2");
-
-                }
-            }
-
-
-
-        } else{
-            for (int i = coupoure[j]; i <taille ; ++i) {
-                tab[i]=0;
-            }
-        }
-    }
-
-}
-
-int traitementpar(int debut,int fin,char* btw,int alphabet[],int tab[],int variable[],int egal,int temporaire,int d,Liste* s_etoile_tab[],int j)
-{   int coup=0;
-
-
-for (int i = fin-1; i > debut-1; --i) {
-
-        temporaire=btw[i];
-        if(alphabet[temporaire]==0)
-        {
-            variable[0]++;
-        }
-        alphabet[temporaire]++;
-        if (btw[i] > btw[i + 1]) {
-            tab[i] = 0;
-
-            if(tab[i+1]==1  )
-            {
-
-                addsubstring(d, i+1, s_etoile_tab,1);
-
-                variable[1]++;
-
-                tab[i+1]=2;
-            }
-            //printf("traite %i ",i);
-        } else if (btw[i] < btw[i + 1]) {
-            tab[i] = 1;
-
-
-
-        } else{
-
-            if(i==fin-1){
-                coup=1;
-                egal=i;
-            } else if (coup==1 && egal==(i+1))
-            {
-                if(btw[i]==btw[egal]){
-
-                    egal=i;
-                }
-
-            }
-
-            else
-            {
-                if(tab[i+1]==2)
-                {
-                  //  printf("traite %i",i);
-                    tab[i]=1;
-                } else
-                {
-
-                    tab[i]=tab[i+1];
-                }
-            }
-        }
-
-
-
-    }
-
-    return egal;
-}
-
-void tychar(char* btw,Liste* s_etoile_tab[],int tab[],int alphabet[],int variable[],int nrb_thread) {
-
-
-    int coupoure[nrb_thread];
-    variable[0] = 0;
-    variable[1] = 0;
-    int f;
-    f = strlen(btw) / nrb_thread;
-
-    printf("\n");
-    init(coupoure, nrb_thread);
-    init(tab, strlen(btw));
-
-    if (nrb_thread*2>strlen(btw)) {
-
-        for (int i = 0; i <nrb_thread ; ++i) {
-
-            s_etoile_tab[i] = malloc(sizeof(Liste)+1);
-            s_etoile_tab[i]->premier = NULL;
-        }
-
-        int temp;
-        int egl=100;
-        traitementpar(0, strlen(btw), btw, alphabet, tab, variable, egl, temp, 0,
-                      s_etoile_tab, 0);
-        printf(" fini?");
-    } else {
-
-        int nbrstop[nrb_thread];
-
-#pragma omp parallel num_threads(nrb_thread)
-    {
-
-        int premier = 0;
-        LC *pointeur = malloc(sizeof(LC)+1);
-        pointeur->s = NULL;
-        LC *precedent;
-        int f, d, egal;
-        egal = 100;
-        int init = 0;
-        int temporaire;
-        f = strlen(btw) / nrb_thread;
-        d = omp_get_thread_num();
-
-        s_etoile_tab[d] = malloc(sizeof(Liste)+1);
-        s_etoile_tab[d]->premier = NULL;
-
-        if (d == (nrb_thread - 1)) {
-            egal = traitementpar(f * d + 1, strlen(btw), btw, alphabet, tab, variable, egal, temporaire, d,
-                                 s_etoile_tab, d);
-
-        } else {
-
-            egal = traitementpar(f * d + 1, f * (d + 1), btw, alphabet, tab, variable, egal, temporaire, d,
-                                 s_etoile_tab, d);
-
-        }
-        if (egal != 100) {
-            coupoure[d] = egal;
-        }
-
-
+int main(void)
+{
+    int posh;
+    int debutch=0;
+    int taillech=6;
+    //char *debch="moumen";
+    int indice=0;
+    int taillestab=10;
+    //lms_tab
+    lmstab *stab;
+    stab=malloc(sizeof(lmstab)*100000);
+    taillestab=100000;
+    //init_lms_tab(stab);
+    //init tab hash
+    htab *h;
+    h=malloc(sizeof(htab)*hsize);
+    init_hash_tab(h);
+    //init lms_div
+    lms_div *mot_div;
+    mot_div =malloc(sizeof(lms_div)*1);
+
+    init_lms_div(mot_div);
+
+
+    //FILE *file = fopen("DNAdataset.txt", "r");
+    //FILE *file = fopen("C:\\Users\\adem\\CLionProjects\\untitled\\DNAdataset.txt", "r");
 /*
-        #pragma omp master
-        {
-        printf(" \ntab \n");
-        for (int i = 0; i <strlen(btw) ; ++i) {
-            printf("%i ",tab[i]);
-        }
-        printf(" \ntab \n");
+    if (file == NULL) {
+        fprintf(stderr, "Error: Can't open file '%s'.", "DNAdataset.txt");
+        exit(EXIT_FAILURE);
     }
-    */
-    #pragma omp barrier
-            nbrstop[d] = cornercase(btw, alphabet, variable, s_etoile_tab, tab, f, coupoure, d);
-    #pragma omp barrier
-            maincase(btw, alphabet, variable, s_etoile_tab, tab, f, coupoure, d, nrb_thread, strlen(btw), nbrstop[d]);
-    }
+    fseek(file, 0, SEEK_END);
+    long n = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *btw = malloc(sizeof(char) * (n + 1));
+    btw[n] = '\0';
+    fread(btw, sizeof(char), n, file);
+    fclose(file);
+    printf("%d \n",n);*/
+    ////////////////////
 
 
 
-}
+    char btw[]="mmiissiissiippii";
+    strcat(btw,"0");
+
+    int type=0;
+    int hvalue;
+    int n=strlen(btw);
+    posh=addlms(h,stab,debutch,1,btw,n-1,taillestab,mot_div);
+    printf("%d \n",posh);
+    mot_div->mot[mot_div->indice-1].hpos=posh;
+    debutch++;
+    int indiceS=n-1;
+    for (int i=n-2; i>=0; i--) {
+//compter le nombre de caractere?
+
+        if (btw[i]< btw[i+1]) { // TYPE_S
+            type=1;
+        } else if (btw[i]> btw[i+1]) { // TYPE_L
+            if (type==1) {
+//lahna tinsici la chaine li tebda men hada lindice taile ta3ha (indiceS-i)
+                //printf("%i %i \n",i,indiceS);
+                /* char *sous_chaine=malloc(sizeof(char)*(indiceS-i));
+                 int l=0;
+                 for (int j = i+1; j <indiceS+1 ; ++j) {
+                     sous_chaine[l]=btw[j];
+                     l++;
+                 }*/
+                //char *chaine=malloc(sizeof(char)*(indiceS-i+1));
+                /*int l=0;
+                for (int j = i+1; j <indiceS+1 ; ++j) {
+                    chaine[l]=btw[j];
+                    l++;
+                }*/
+                //printf("[%s]",chaine);
+                //set_lms_indice(debutch,16,stab);
+                posh=addlms(h,stab,debutch,indiceS-i+1,btw,i+1,taillestab,mot_div);
+                    //printf("%d \n",posh);
+                    mot_div->mot[mot_div->indice-1].hpos=posh;
 
 
-            /*
-        if (reusefonction==1)
-        {
-
-            reusefonction=cornercase(btw,alphabet,variable,s_etoile_tab,tab,f,coupoure,d);
-        }
-        */
-
-
-    /*
-
-    #pragma omp parallel for
-    for (int i = 0; i < nrb_thread; ++i) {
-    }
-    */
-
-
-
-
-
-
-    printf(" \ntab fin \n");
-    for (int i = 0; i <strlen(btw) ; ++i) {
-        printf("%i ",tab[i]);
-    }
-
-
-}
-//a optimiser
-int getname(int tab[],int taille, char* t[],char* name)
-{
-    int unique=1;
-    int stop,indice,egal,boucle;
-    printf("\n%i tab indice getname \n",taille);
-    for (int i = 0; i <taille ; ++i) {
-        printf("%i ",tab[i]);
-
-    }
-    char sch;
-    int precedent=1;
-    name[tab[0]]=1;
-    if(taille==1){
-    name[1]=0;
-    name[2]=0;
-    }
-    for (int m = 1; m <taille ; ++m) {
-
-        int indice=strlen(t[m])-1;
-        if(indice==(strlen(t[m-1])-1))
-        {int egal=1;
-
-
-            while (indice>0 & egal==1)
-            {
-                if(t[m][indice]!=t[m-1][indice])
+                if (mot_div->taille==mot_div->indice)
                 {
-                    egal=0;
-                }
-                indice--;
-            }
-            if (egal==1)
-            {name[tab[m]]=precedent;
-            unique=0;
-                }
-            else{
-                precedent=m+1;
-                name[tab[m]]=m+1;
+                    //printf("once been here lmsdiv");
+                    mot_div->mot=realloc(mot_div->mot, sizeof(save)*(mot_div->taille+10000));
+                    mot_div->taille=mot_div->taille+10000;
                 }
 
-        } else{
-            precedent=m+1;
-            name[tab[m]]=(m+1);
 
-        }
+                debutch=debutch+1;
+                if(debutch==taillestab)
+                {
+                    //printf("once been here lmstab \n");
+                    stab=realloc(stab, sizeof(lmstab)*(taillestab+100000));
+                    taillestab+=100000;
 
-    }
-    for (int j = taille; j <strlen(name) ; ++j) {
-        name [j]=0;
 
-    }
-    printf("name %s %i %i",name,strlen(name),taille);
-    return unique;
-}
-
-int radix(char* t[],char* alphabet,int taille,int position[],char* name)
-{
-    int tab[taille];
-    int tp[taille];
-    char *s;
-    char *c;
-    int borne_inferieur;
-    char u=' ';
-    int compteurtabbleau,position_char;
-    borne_inferieur=u;
-    int temporaire;
-    for (int l = 0; l < taille; ++l) {
-        tp[l]=l;
-    }
-    //a revoir pk 84??
-    int tableau_frequence[84]={ };
-    int max=strlen(t[0]);
-
-    for (int i = 1; i <taille ; ++i) {
-
-        if(strlen(t[i])>max)
-        {
-
-            max=strlen(t[i]);
-        }
-    }
+                }
+                //
+                //
 
 
 
-    max=max-1;
+                indiceS=i+1;
 
-
-    int temp;
-
-    for (int i = max; i>-1 ; --i) {
-        //a optimiser
-
-        int tableau_frequence[84]={ };
-
-        for (int j = 0; j <taille ; ++j) {
-
-            if (strlen(t[j])-1 >=i)
-            {
-
-                temp= t[j][i];
-                tableau_frequence[temp-borne_inferieur]=tableau_frequence[temp-borne_inferieur]+1;
-            } else{
-                tableau_frequence[0]++;
             }
-
-        }
-
-        position_char=0;
-
-        for (int k = 0; k <strlen(alphabet) ; ++k) {
-            temp=alphabet[k];
-            temporaire=tableau_frequence[temp-borne_inferieur];
-            tableau_frequence[temp-borne_inferieur]=position_char;
-            position_char =position_char+temporaire;
-        }
-        for (int l = 0; l <taille ; ++l) {
-            if(i>=strlen(t[l])){
-                tab[l]=tableau_frequence[0];
-                tableau_frequence[0]++;
-            } else
-            {
-                temp=t[l][i];
-
-                tab[l]=tableau_frequence[temp-borne_inferieur];
-                tableau_frequence[temp-borne_inferieur]++;
-            }
-        }
-
-        int inter=0;
-        int inter2;
-        compteurtabbleau=0;
-        inter=tp[0];
-        char* temp=t[0];
-        char* temp2;
-        for (int n = 0; n <taille ; ++n) {
-            temp2=t[tab[compteurtabbleau]];
-            inter2=tp[tab[compteurtabbleau]];
-            tp[tab[compteurtabbleau]]=inter;
-            t[tab[compteurtabbleau]]=temp;
-            temp=temp2;
-            inter=inter2;
-            if(compteurtabbleau==tab[compteurtabbleau])
-            {
-
-                compteurtabbleau++;
-                temp=t[compteurtabbleau];
-                inter=tp[compteurtabbleau];
-            } else
-            {
-                compteurtabbleau=tab[compteurtabbleau];
-            }
-
+            type=0;
         }
 
 
-    }
-
-
-    return getname(tp,taille,t,name);
-
-}
-char* induced_first_iteration(char* btw,int nbr_thread,int tab[])
-{
-
-    Liste* s_etoile_tab[nbr_thread];
-
-    int nbr;
-    int alphabet[258]={ };
-    int variable[2];
-    double duration;
-    int taille;
-    //affectation type car
-
-    tychar(btw,s_etoile_tab,tab,alphabet,variable,nbr_thread);
-
-    nbr=variable[1];
-    taille=variable[0];
-    //fin
-    //extraction des sous chaine
-    printf("nbr %i",nbr);
-    char* newchar="";
-    newchar=malloc(taille* sizeof(char));
-    char* schaine[nbr];
-    int position[nbr];
-
-    extratcSstar(btw,s_etoile_tab,schaine,nbr,nbr_thread,position);
-
-    //fin extraction
-
-    //extraction alphabet
-    char alpha[taille+1];
-    getAlphabet(alphabet,taille,alpha);
-    printf("\n alhabet:%s %i fin\n",alpha,strlen(alpha));
-    //fin
-    //affichage sous chaine
-    printf("\n debut sous chaine \n");
-    for (int m = 0; m <nbr ; ++m) {
-        printf("%i",m);
-        printf(" [%s] ",schaine[m]);
 
     }
 
-    printf("fin sous chaine \n");
-    //fin
-    //creation nouvelle sous chaine
-    if(nbr!=0 ) {
-     int unique   = radix(schaine, alpha, nbr, position,newchar);
-        printf("newchar: %s %i \n", newchar,unique);
+    /* int stringLen = sizeof(mot_div->mot) / sizeof(char *);
+
+     qsort(mot_div->mot,mot_div->indice, sizeof(*mot_div->mot),myCompare);
+     printf("%d %d\n",mot_div->taille,mot_div->indice );
+     for (int m = 0; m <1000 ; ++m) {
+         printf("%s \n",mot_div->mot[m]);
+     }*/
+    //const char *input[] = {"a","orange","apple","mobile","car","arnab"};
 
 
-    return newchar;
+
+
+    qsort(mot_div->mot, mot_div->indice, sizeof(save), myCompare);
+    //qsort(stab, debutch, sizeof(lmstab), myCompare2);
+    int i=debutch-1;
+    lmstab inter;
+
+    for (int i1 = 0; i1 <debutch/2 ; ++i1) {
+        //printf("%d ",i1);
+        inter=stab[i1];
+        stab[i1]=stab[i];
+        stab[i]=inter;
+        i--;
     }
-    else {
-        return " ";
+    /*
+    for (int k = 0; k <500 ; ++k) {
+        // mot_div->mot[k][strlen( mot_div->mot[k])-1]='?';
+
+            printf("%d   %s  %d\n", mot_div->mot[k].hpos, mot_div->mot[k].car, strlen(mot_div->mot[k].car));
     }
-}
+     */
 
 
-
-
-int main() {
-    //premiere iteration
-    int nbr_thread=2;
-    clock_t start, finish;
-
-    double duration;
-    char btw[]="mmiissiissiippiiiiiii";
-    int tab[strlen(btw)];
-
-    start=clock();
-    char* seconditeration=induced_first_iteration(btw,nbr_thread,tab);
-    finish = clock();
-    duration = (double)(finish - start) / CLOCKS_PER_SEC;
-    printf( " \n%f seconds\n", duration );
-    printf("fin premiere iteration %s\n",seconditeration);
-
-    //fin
-    //fin premiere iteration
-    int tab2[strlen(seconditeration)];
-    char* test=induced_first_iteration(seconditeration,nbr_thread,tab2);
-
-    //debut deuxieme iteration (ajout d'une condition pour voir si il faut faire une deuxieme iteration)
- /*
-    Liste* s_etoile_tab2[8];
-    int alphabet2[258]={ };
-
-    int variable2[2];
-
-    tychar(seconditeration,s_etoile_tab2,tab2,alphabet2,variable2,nbr_thread);
-    printf("nbr %i",variable2[1]);
-    char* schaine2[variable2[1]];
-    int position2[variable2[1]];
-    printf("ici");
-    extratcSstar(seconditeration,s_etoile_tab2,schaine2,variable2[1],nbr_thread,position2);
-
-    char alpha2[variable2[0]+1];
-    getAlphabet(alphabet2,variable2[0],alpha2);
-    for (int m = 0; m <variable2[1] ; ++m) {
-        printf("\n%i",m);
-        printf(" [%s] ",schaine2[m]);
+    for (int k = 0; k <mot_div->indice; ++k) {
+        //printf("%s ",mot_div->mot[k].car);
+        int hash_function =hfunc(strlen(mot_div->mot[k].car),mot_div->mot[k].car);
+        h[hash_function].tab[mot_div->mot[k].hpos]=k;
 
     }
 
-    printf("fin sous chaine \n");
-    //fin
-    printf("\n alhabet:%s %i\n",alpha2,strlen(alpha2));
+    for (int m = 0; m <debutch ; ++m) {
 
-    //creation nouvelle sous chaine
+        int hash_function =get_lms_hsize(m,stab);
+        printf("%d ",h[hash_function].tab[get_lms_posh(m,stab)]);
+        set_lms_names(m,h[hash_function].tab[get_lms_posh(m,stab)],stab);
 
-    char* newchar2=radix(schaine2,alpha2,variable2[1],position2);
-    printf("newchar: %s \n",newchar2);
- */
-    return 0;
+    }
+
+  //set_lms_posh(0,5,stab);
+
+
 }
